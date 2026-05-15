@@ -282,16 +282,22 @@ ComponentEnthalpyDataList createDefaultEnthalpyData()
     // C2H6, примерно газовая Cp около 52.5 J/(mol*K)
     // 52.5 J/(mol*K) = 52.5e3 J/(kmol*K)
     data[componentIndex(Component::C2H6)].name = "C2H6";
-    data[componentIndex(Component::C2H6)].cpA = 52.5e3;
+    data[componentIndex(Component::C2H6)].referenceMolarEnthalpyJPerKmol =
+        -84738.0e3;
+    data[componentIndex(Component::C2H6)].cpA =
+        52.5e3;
 
-    // C5H12, грубая Cp около 167 J/(mol*K)
     data[componentIndex(Component::C5H12)].name = "C5H12";
-    data[componentIndex(Component::C5H12)].cpA = 167.0e3;
+    data[componentIndex(Component::C5H12)].referenceMolarEnthalpyJPerKmol =
+        -146490.0e3;
+    data[componentIndex(Component::C5H12)].cpA =
+        167.0e3;
 
-    // H2O, жидкая вода около 75.3 J/(mol*K)
-    // Это примерно 4180 J/(kg*K)
     data[componentIndex(Component::H2O)].name = "H2O";
-    data[componentIndex(Component::H2O)].cpA = 75.3e3;
+    data[componentIndex(Component::H2O)].referenceMolarEnthalpyJPerKmol =
+        -241814.0e3;
+    data[componentIndex(Component::H2O)].cpA =
+        75.3e3;
 
     return data;
 }

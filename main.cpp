@@ -31,7 +31,7 @@ namespace
     constexpr bool PrintInitialState = true;
     constexpr bool PrintMaterials = false;
 
-    constexpr bool RunFlashDiagnostics = false;
+    constexpr bool RunFlashDiagnostics = true;
     constexpr bool RunReactorModelDiagnostic = false;
     constexpr bool RunPressureInitializationDiagnostic = true;
     constexpr bool RunMassBalanceDiagnostic = false;
@@ -54,7 +54,7 @@ namespace
     constexpr bool RunEnergyBalanceDiagnostic = false;
     constexpr bool RunEnergyDaeResidualDiagnostic = false;
     constexpr bool RunEnergyRadauSingleStepDiagnostic = false;
-    constexpr bool RunEnergyRadauSimulationDiagnostic = true;
+    constexpr bool RunEnergyRadauSimulationDiagnostic = false;
 
     constexpr bool PrintFinalState = true;
 
@@ -177,6 +177,27 @@ namespace
         std::cout << "  rho_mass_mix = "
                   << result.massDensityMixtureKgPerM3
                   << " kg/m3\n";
+
+        std::cout << "\nEnthalpies:\n";
+        std::cout << "  H_liq = "
+                  << result.molarEnthalpyLiquidJPerKmol
+                  << " J/kmol\n";
+        std::cout << "  H_vap = "
+                  << result.molarEnthalpyVaporJPerKmol
+                  << " J/kmol\n";
+        std::cout << "  H_mix = "
+                  << result.molarEnthalpyMixtureJPerKmol
+                  << " J/kmol\n";
+
+        std::cout << "  H_liq = "
+                  << result.molarEnthalpyLiquidJPerKmol / 1000.0
+                  << " kJ/kmol\n";
+        std::cout << "  H_vap = "
+                  << result.molarEnthalpyVaporJPerKmol / 1000.0
+                  << " kJ/kmol\n";
+        std::cout << "  H_mix = "
+                  << result.molarEnthalpyMixtureJPerKmol / 1000.0
+                  << " kJ/kmol\n";
 
         std::cout << "\nLiquid composition x:\n";
         for (std::size_t i = 0; i < ComponentCount; ++i)
