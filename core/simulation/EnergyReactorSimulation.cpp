@@ -145,27 +145,55 @@ std::string EnergyReactorSimulationRunner::resultTableToString(
     int printEvery
     ) const
 {
-    if (printEvery <= 0)
-    {
-        throw std::invalid_argument("Print interval must be positive");
+    if (printEvery <= 0) {
+        throw std::invalid_argument(
+            "Print interval must be positive"
+            );
+    }
+
+    if (result.points.empty()) {
+        return {};
+    }
+
+    const ReactorState& firstState =
+        result.points.front().state;
+
+    const std::size_t componentCount =
+        firstState.componentCount();
+
+    if (componentCount == 0) {
+        throw std::runtime_error(
+            "Cannot print result table: reactor state has no components"
+            );
     }
 
     std::ostringstream out;
-
     out << std::fixed << std::setprecision(6);
 
-    out << "time_s"
+    out
+        << "time_s"
         << "\tP_bar"
         << "\tT_C"
         << "\tbeta"
-        << "\tFout"
-        << "\tM_C2H6_kg"
-        << "\tM_C5H12_kg"
-        << "\tM_H2O_kg"
-        << "\tE_J"
-        << "\tdM_C2H6_dt"
-        << "\tdM_C5H12_dt"
-        << "\tdM_H2O_dt"
+        << "\tFout";
+
+    for (std::size_t i = 0; i < componentCount; ++i) {
+        out
+            << "\tM_"
+            << firstState.componentName(i)
+            << "_kg";
+    }
+
+    out << "\tE_J";
+
+    for (std::size_t i = 0; i < componentCount; ++i) {
+        out
+            << "\tdM_"
+            << firstState.componentName(i)
+            << "_dt";
+    }
+
+    out
         << "\tdE_dt_W"
         << "\tQdot_W"
         << "\tHdot_in_W"
@@ -173,14 +201,12 @@ std::string EnergyReactorSimulationRunner::resultTableToString(
         << "\tNewton_it"
         << "\n";
 
-    for (std::size_t index = 0; index < result.points.size(); ++index)
-    {
+    for (std::size_t index = 0; index < result.points.size(); ++index) {
         const bool shouldPrint =
-            index % static_cast<std::size_t>(printEvery) == 0
-            || index + 1 == result.points.size();
+            index % static_cast<std::size_t>(printEvery) == 0 ||
+            index + 1 == result.points.size();
 
-        if (!shouldPrint)
-        {
+        if (!shouldPrint) {
             continue;
         }
 
@@ -189,6 +215,12 @@ std::string EnergyReactorSimulationRunner::resultTableToString(
 
         const ReactorState& state =
             point.state;
+
+        if (state.componentCount() != componentCount) {
+            throw std::runtime_error(
+                "Cannot print result table: component count changed during simulation"
+                );
+        }
 
         const WellStirredReactorEvaluation& evaluation =
             point.evaluation;
@@ -199,18 +231,36 @@ std::string EnergyReactorSimulationRunner::resultTableToString(
         const EnergyBalanceResult& energyBalance =
             point.energyBalance;
 
-        out << point.timeS
+        if (massBalance.massDerivativesKgPerS.size() != componentCount) {
+            throw std::runtime_error(
+                "Cannot print result table: mass derivative vector size differs from component count"
+                );
+        }
+
+        out
+            << point.timeS
             << "\t" << state.pressureBar()
             << "\t" << state.temperatureC()
             << "\t" << evaluation.flash.beta
-            << "\t" << massBalance.outletFlowKmolPerS
-            << "\t" << state.massKg(Component::C2H6)
-            << "\t" << state.massKg(Component::C5H12)
-            << "\t" << state.massKg(Component::H2O)
-            << "\t" << state.energyJ()
-            << "\t" << massBalance.massDerivativesKgPerS[componentIndex(Component::C2H6)]
-            << "\t" << massBalance.massDerivativesKgPerS[componentIndex(Component::C5H12)]
-            << "\t" << massBalance.massDerivativesKgPerS[componentIndex(Component::H2O)]
+            << "\t" << massBalance.outletFlowKmolPerS;
+
+        for (std::size_t i = 0; i < componentCount; ++i) {
+            out
+                << "\t"
+                << state.massKg(i);
+        }
+
+        out
+            << "\t"
+            << state.energyJ();
+
+        for (std::size_t i = 0; i < componentCount; ++i) {
+            out
+                << "\t"
+                << massBalance.massDerivativesKgPerS[i];
+        }
+
+        out
             << "\t" << energyBalance.energyDerivativeW
             << "\t" << energyBalance.heatTransferW
             << "\t" << energyBalance.inletEnthalpyFlowW
