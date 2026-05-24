@@ -3,6 +3,7 @@
 #include "../models/WellStirredReactorModel.h"
 #include "../numerics/NewtonSolver.h"
 
+#include <array>
 #include <cstddef>
 #include <string>
 
@@ -61,63 +62,58 @@ class EnergyReactorDae
 public:
     explicit EnergyReactorDae(
         const WellStirredReactorModel& reactorModel
-    );
-
-    EnergyReactorDae(
-        const WellStirredReactorModel& reactorModel,
-        const ReactorState& statePrototype
-    );
+        );
 
     EnergyReactorDaeVariables variablesFromState(
         const ReactorState& state
-    ) const;
+        ) const;
 
     ReactorState stateFromVariables(
         const EnergyReactorDaeVariables& variables
-    ) const;
+        ) const;
 
     EnergyReactorDaeResidual computeResidual(
         const EnergyReactorDaeVariables& variables,
         const EnergyReactorDaeDerivatives& derivatives
-    ) const;
+        ) const;
 
     numerics::Vector variablesToVector(
         const EnergyReactorDaeVariables& variables
-    ) const;
+        ) const;
 
     EnergyReactorDaeVariables variablesFromVector(
         const numerics::Vector& vector
-    ) const;
+        ) const;
 
     numerics::Vector derivativesToVector(
         const EnergyReactorDaeDerivatives& derivatives
-    ) const;
+        ) const;
 
     EnergyReactorDaeDerivatives derivativesFromVector(
         const numerics::Vector& vector
-    ) const;
+        ) const;
 
     numerics::Vector residualToVector(
         const EnergyReactorDaeResidual& residual
-    ) const;
+        ) const;
 
     numerics::Vector computeResidualVector(
         const numerics::Vector& variablesVector,
         const numerics::Vector& derivativesVector
-    ) const;
+        ) const;
 
     std::string residualToString(
         const EnergyReactorDaeResidual& residual
-    ) const;
+        ) const;
 
     EnergyReactorDaeStepResult radauIIA3Step(
         const ReactorState& oldState,
         double timeStepS
-    ) const;
+        ) const;
 
     std::string stepResultToString(
         const EnergyReactorDaeStepResult& result
-    ) const;
+        ) const;
 
     std::size_t componentCount() const;
     std::size_t variableCount() const;
@@ -126,5 +122,4 @@ public:
 
 private:
     const WellStirredReactorModel& reactorModel_;
-    ReactorState statePrototype_;
 };

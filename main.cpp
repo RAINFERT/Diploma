@@ -97,30 +97,40 @@ namespace
     }
 
     ReactorState makeInitialState(
-        const SimulationConfig& config
+        const SimulationConfig& config,
+        const ComponentSet& componentSet
         )
     {
-        ReactorState state;
+        std::vector<std::string> names;
+        std::vector<double> molarMasses;
 
-        if (config.components.size() != config.initialState.componentMassesKg.size()) {
-            throw std::runtime_error(
-                "Cannot build initial state: components size differs from component masses size"
+        names.reserve(componentSet.size());
+        molarMasses.reserve(componentSet.size());
+
+        for (std::size_t i = 0; i < componentSet.size(); ++i) {
+            names.push_back(
+                componentSet.key(i)
+                );
+
+            molarMasses.push_back(
+                componentSet.material(i).molarMassKgPerKmol
                 );
         }
 
-        if (config.components.size() != ComponentCount) {
+        ReactorState state(
+            names,
+            molarMasses
+            );
+
+        if (config.initialState.componentMassesKg.size() != componentSet.size()) {
             throw std::runtime_error(
-                "Cannot build initial state at current stage: expected exactly ComponentCount components"
+                "Initial component mass vector size differs from ComponentSet size"
                 );
         }
 
-        for (std::size_t i = 0; i < config.components.size(); ++i)
-        {
-            const Component component =
-                config.components[i];
-
+        for (std::size_t i = 0; i < componentSet.size(); ++i) {
             state.setMassKg(
-                component,
+                i,
                 config.initialState.componentMassesKg[i]
                 );
         }
@@ -393,11 +403,18 @@ int main(int argc, char* argv[])
                   << "\n";
 
         ReactorState initialState =
-            makeInitialState(config);
+            makeInitialState(
+                config,
+                componentSet
+                );
 
         ReactionModel reactionModel(
             thermo.materials()
         );
+
+        reactionModel.setEnabled(
+            config.reactions.enabled
+            );
 
         if (config.reactions.enabled)
         {

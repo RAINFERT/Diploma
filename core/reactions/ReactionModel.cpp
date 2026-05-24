@@ -33,6 +33,16 @@ void ReactionModel::setReverseRateConstant(
     kReversePerS_ = value;
 }
 
+void ReactionModel::setEnabled(const bool enabled)
+{
+    enabled_ = enabled;
+}
+
+bool ReactionModel::enabled() const
+{
+    return enabled_;
+}
+
 double ReactionModel::forwardRateConstant() const
 {
     return kForwardPerS_;
@@ -52,9 +62,17 @@ ReactionRates ReactionModel::computeRates(
 {
     requireCompositionSize(
         liquidComposition,
-        ComponentCount,
+        materials_.size(),
         "ReactionModel::computeRates liquidComposition"
         );
+
+    ReactionRates result;
+    result.componentRatesKmolPerM3S =
+        makeComposition(materials_.size());
+
+    if (!enabled_) {
+        return result;
+    }
 
     if (temperatureK <= 0.0)
     {
@@ -71,8 +89,11 @@ ReactionRates ReactionModel::computeRates(
         throw std::invalid_argument("Liquid molar density cannot be negative");
     }
 
-    ReactionRates result;
-    result.componentRatesKmolPerM3S = makeComposition(ComponentCount);
+    if (materials_.size() != ComponentCount) {
+        throw std::runtime_error(
+            "Legacy reaction model supports only C2H6/C5H12/H2O. Disable reactions for arbitrary component sets."
+            );
+    }
 
     const std::size_t c2Index =
         componentIndex(Component::C2H6);

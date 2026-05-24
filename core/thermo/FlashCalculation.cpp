@@ -396,6 +396,46 @@ void FlashCalculation::computePhaseCompositions(
     Composition& y
     ) const
 {
+    requireCompositionSize(
+        z,
+        materials_.size(),
+        "FlashCalculation::computePhaseCompositions z"
+        );
+
+    requireCompositionSize(
+        k,
+        materials_.size(),
+        "FlashCalculation::computePhaseCompositions k"
+        );
+
+    if (x.size() != materials_.size()) {
+        x = makeComposition(materials_.size());
+    }
+
+    if (y.size() != materials_.size()) {
+        y = makeComposition(materials_.size());
+    }
+
+    requireCompositionSize(
+        z,
+        materials_.size(),
+        "FlashCalculation::computePhaseCompositions z"
+        );
+
+    requireCompositionSize(
+        k,
+        materials_.size(),
+        "FlashCalculation::computePhaseCompositions k"
+        );
+
+    if (x.size() != materials_.size()) {
+        x = makeComposition(materials_.size());
+    }
+
+    if (y.size() != materials_.size()) {
+        y = makeComposition(materials_.size());
+    }
+
     if (beta <= 0.0)
     {
         x = z;
@@ -701,8 +741,11 @@ FlashResult FlashCalculation::calculate(
     {
         const double beta = solveBeta(z, k);
 
-        Composition x{};
-        Composition y{};
+        Composition x =
+            makeComposition(materials_.size());
+
+        Composition y =
+            makeComposition(materials_.size());
 
         computePhaseCompositions(beta, z, k, x, y);
 

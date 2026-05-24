@@ -41,6 +41,8 @@ public:
 
     double forwardRateConstant() const;
     double reverseRateConstant() const;
+    void setEnabled(bool enabled);
+    bool enabled() const;
 
 private:
     MaterialList materials_;
@@ -50,4 +52,5 @@ private:
     // тогда r = k*C имеет kmol/(m3*s)
     double kForwardPerS_ = 100.0;
     double kReversePerS_ = 100.0;
+    bool enabled_ = true;
 };

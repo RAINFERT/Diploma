@@ -3,8 +3,6 @@
 #include <iomanip>
 #include <sstream>
 #include <stdexcept>
-#include <utility>
-#include <vector>
 
 ReactorState::ReactorState()
     : ReactorState(
@@ -14,7 +12,7 @@ ReactorState::ReactorState()
               molecularWeightKgPerKmol(Component::C5H12),
               molecularWeightKgPerKmol(Component::H2O)
           }
-      )
+          )
 {
     setMassKg(componentIndex(Component::C2H6), 0.0);
     setMassKg(componentIndex(Component::C5H12), 1.0);
@@ -24,32 +22,24 @@ ReactorState::ReactorState()
 ReactorState::ReactorState(
     std::vector<std::string> componentNames,
     std::vector<double> molarMassesKgPerKmol
-)
+    )
     : massesKg_(makeComposition(componentNames.size())),
-      energyJ_(0.0),
-      temperatureC_(100.0),
-      pressureBar_(2.5),
-      componentNames_(std::move(componentNames)),
-      molarMassesKgPerKmol_(std::move(molarMassesKgPerKmol))
+    energyJ_(0.0),
+    temperatureC_(100.0),
+    pressureBar_(2.5),
+    componentNames_(std::move(componentNames)),
+    molarMassesKgPerKmol_(std::move(molarMassesKgPerKmol))
 {
     if (componentNames_.empty()) {
         throw std::runtime_error(
             "ReactorState must contain at least one component"
-        );
+            );
     }
 
     if (componentNames_.size() != molarMassesKgPerKmol_.size()) {
         throw std::runtime_error(
             "ReactorState component names size differs from molar masses size"
-        );
-    }
-
-    for (std::size_t i = 0; i < molarMassesKgPerKmol_.size(); ++i) {
-        if (molarMassesKgPerKmol_[i] <= 0.0) {
-            throw std::runtime_error(
-                "ReactorState molar mass must be positive"
             );
-        }
     }
 }
 
@@ -60,21 +50,21 @@ std::size_t ReactorState::componentCount() const
 
 const std::string& ReactorState::componentName(
     const std::size_t index
-) const
+    ) const
 {
     return componentNames_.at(index);
 }
 
 double ReactorState::molarMassKgPerKmol(
     const std::size_t index
-) const
+    ) const
 {
     return molarMassesKgPerKmol_.at(index);
 }
 
 double ReactorState::massKg(
     const std::size_t index
-) const
+    ) const
 {
     return massesKg_.at(index);
 }
@@ -82,12 +72,12 @@ double ReactorState::massKg(
 void ReactorState::setMassKg(
     const std::size_t index,
     const double value
-)
+    )
 {
     if (value < 0.0) {
         throw std::invalid_argument(
-            "Mass cannot be negative"
-        );
+            "Component mass cannot be negative"
+            );
     }
 
     massesKg_.at(index) = value;
@@ -96,42 +86,39 @@ void ReactorState::setMassKg(
 void ReactorState::addMassKg(
     const std::size_t index,
     const double deltaKg
-)
+    )
 {
-    const double newValue =
+    const double updated =
         massKg(index) + deltaKg;
 
-    if (newValue < 0.0) {
+    if (updated < 0.0) {
         throw std::runtime_error(
-            "Mass became negative"
-        );
+            "Component mass became negative"
+            );
     }
 
-    setMassKg(
-        index,
-        newValue
-    );
+    setMassKg(index, updated);
 }
 
 double ReactorState::molesKmol(
     const std::size_t index
-) const
+    ) const
 {
-    const double molecularWeight =
+    const double molarMass =
         molarMassKgPerKmol(index);
 
-    if (molecularWeight <= 0.0) {
+    if (molarMass <= 0.0) {
         throw std::runtime_error(
             "Molar mass must be positive"
-        );
+            );
     }
 
-    return massKg(index) / molecularWeight;
+    return massKg(index) / molarMass;
 }
 
 double ReactorState::moleFraction(
     const std::size_t index
-) const
+    ) const
 {
     const double total =
         totalMolesKmol();
@@ -143,53 +130,29 @@ double ReactorState::moleFraction(
     return molesKmol(index) / total;
 }
 
-double ReactorState::massKg(
-    const Component component
-) const
+double ReactorState::massKg(Component component) const
 {
-    return massKg(
-        componentIndex(component)
-    );
+    return massKg(componentIndex(component));
 }
 
-void ReactorState::setMassKg(
-    const Component component,
-    const double value
-)
+void ReactorState::setMassKg(Component component, double value)
 {
-    setMassKg(
-        componentIndex(component),
-        value
-    );
+    setMassKg(componentIndex(component), value);
 }
 
-void ReactorState::addMassKg(
-    const Component component,
-    const double deltaKg
-)
+void ReactorState::addMassKg(Component component, double deltaKg)
 {
-    addMassKg(
-        componentIndex(component),
-        deltaKg
-    );
+    addMassKg(componentIndex(component), deltaKg);
 }
 
-double ReactorState::molesKmol(
-    const Component component
-) const
+double ReactorState::molesKmol(Component component) const
 {
-    return molesKmol(
-        componentIndex(component)
-    );
+    return molesKmol(componentIndex(component));
 }
 
-double ReactorState::moleFraction(
-    const Component component
-) const
+double ReactorState::moleFraction(Component component) const
 {
-    return moleFraction(
-        componentIndex(component)
-    );
+    return moleFraction(componentIndex(component));
 }
 
 double ReactorState::totalMolesKmol() const
@@ -228,9 +191,7 @@ double ReactorState::energyJ() const
     return energyJ_;
 }
 
-void ReactorState::setEnergyJ(
-    const double value
-)
+void ReactorState::setEnergyJ(double value)
 {
     energyJ_ = value;
 }
@@ -240,9 +201,7 @@ double ReactorState::temperatureC() const
     return temperatureC_;
 }
 
-void ReactorState::setTemperatureC(
-    const double value
-)
+void ReactorState::setTemperatureC(double value)
 {
     temperatureC_ = value;
 }
@@ -252,14 +211,11 @@ double ReactorState::pressureBar() const
     return pressureBar_;
 }
 
-void ReactorState::setPressureBar(
-    const double value
-)
+void ReactorState::setPressureBar(double value)
 {
-    if (value <= 0.0) {
-        throw std::invalid_argument(
-            "Pressure must be positive"
-        );
+    if (value <= 0.0)
+    {
+        throw std::invalid_argument("Pressure must be positive");
     }
 
     pressureBar_ = value;
@@ -276,21 +232,20 @@ std::string ReactorState::toString() const
     out << "  Masses:\n";
     for (std::size_t i = 0; i < componentCount(); ++i) {
         out << "    M(" << componentName(i) << ") = "
-            << massKg(i) << " kg\n";
+            << massesKg_[i] << " kg\n";
     }
 
     out << "  Amounts:\n";
     for (std::size_t i = 0; i < componentCount(); ++i) {
         out << "    n(" << componentName(i) << ") = "
-            << molesKmol(i) << " kmol\n";
+            << molesKmol[i] << " kmol\n";
     }
-    out << "    n(total) = "
-        << totalMolesKmol() << " kmol\n";
+    out << "    n(total) = " << totalMolesKmol() << " kmol\n";
 
     out << "  Mole fractions:\n";
     for (std::size_t i = 0; i < componentCount(); ++i) {
-        out << "    Z(" << componentName(i) << ") = "
-            << moleFraction(i) << "\n";
+        out << "    n(" << componentName(i) << ") = "
+            << moleFraction[i] << "\n";
     }
 
     out << "  Other variables:\n";

@@ -380,7 +380,8 @@ Composition PengRobinsonEOS::computeLogFugacityCoefficients(
 
     const double logTerm = std::log(logArgument);
 
-    Composition lnPhi{};
+    Composition lnPhi =
+        makeComposition(materials_.size());
 
     for (std::size_t i = 0; i < materials_.size(); ++i)
     {
@@ -504,7 +505,8 @@ Composition PengRobinsonEOS::computeFugacityCoefficients(
             zFactor
             );
 
-    Composition phi{};
+    Composition phi =
+        makeComposition(materials_.size());
 
     for (std::size_t i = 0; i < materials_.size(); ++i)
     {

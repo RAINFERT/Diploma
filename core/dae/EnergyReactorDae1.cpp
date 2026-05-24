@@ -1,69 +1,30 @@
 #include "EnergyReactorDae.h"
 
-#include <algorithm>
-#include <cmath>
 #include <iomanip>
-#include <limits>
 #include <sstream>
 #include <stdexcept>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 EnergyReactorDae::EnergyReactorDae(
     const WellStirredReactorModel& reactorModel
-)
-    : reactorModel_(reactorModel),
-      statePrototype_()
+    )
+    : reactorModel_(reactorModel)
 {
-}
-
-EnergyReactorDae::EnergyReactorDae(
-    const WellStirredReactorModel& reactorModel,
-    const ReactorState& statePrototype
-)
-    : reactorModel_(reactorModel),
-      statePrototype_(statePrototype)
-{
-}
-
-std::size_t EnergyReactorDae::componentCount() const
-{
-    return statePrototype_.componentCount();
-}
-
-std::size_t EnergyReactorDae::variableCount() const
-{
-    return componentCount() + 3;
-}
-
-std::size_t EnergyReactorDae::derivativeCount() const
-{
-    return componentCount() + 1;
-}
-
-std::size_t EnergyReactorDae::residualCount() const
-{
-    return componentCount() + 3;
 }
 
 EnergyReactorDaeVariables EnergyReactorDae::variablesFromState(
     const ReactorState& state
-) const
+    ) const
 {
-    const std::size_t n =
-        state.componentCount();
-
-    if (n != componentCount()) {
-        throw std::runtime_error(
-            "EnergyReactorDae::variablesFromState state component count differs from DAE component count"
-        );
-    }
+    const std::size_t n = componentCount();
 
     EnergyReactorDaeVariables variables;
-    variables.massesKg =
-        makeComposition(n);
+    variables.massesKg = makeComposition(n);
 
     for (std::size_t i = 0; i < n; ++i) {
-        variables.massesKg[i] =
-            state.massKg(i);
+        variables.massesKg[i] = state.massKg(i);
     }
 
     variables.energyJ =
@@ -80,23 +41,14 @@ EnergyReactorDaeVariables EnergyReactorDae::variablesFromState(
 
 ReactorState EnergyReactorDae::stateFromVariables(
     const EnergyReactorDaeVariables& variables
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    requireCompositionSize(
-        variables.massesKg,
-        n,
-        "EnergyReactorDae::stateFromVariables massesKg"
-    );
-
-    ReactorState state =
-        statePrototype_;
+    ReactorState state;
 
     double massScaleKg = 0.0;
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         massScaleKg +=
             std::abs(variables.massesKg[i]);
     }
@@ -105,49 +57,51 @@ ReactorState EnergyReactorDae::stateFromVariables(
         1.0e-12
         + 1.0e-8 * std::max(1.0, massScaleKg);
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         double massKg =
             variables.massesKg[i];
 
-        if (massKg < -negativeMassToleranceKg) {
-            throw std::runtime_error(
-                "Energy DAE variable mass cannot be negative"
-            );
+        if (massKg < -negativeMassToleranceKg)
+        {
+            throw std::runtime_error("Energy DAE variable mass cannot be negative");
         }
 
-        if (massKg < 0.0) {
+        if (massKg < 0.0)
+        {
             massKg = 0.0;
         }
 
+        const Component component =
+            static_cast<Component>(i);
+
         state.setMassKg(
-            i,
+            component,
             massKg
-        );
+            );
     }
 
-    if (variables.pressureBar <= 0.0) {
-        throw std::runtime_error(
-            "Energy DAE pressure must be positive"
-        );
+    if (variables.pressureBar <= 0.0)
+    {
+        throw std::runtime_error("Energy DAE pressure must be positive");
     }
 
-    if (variables.temperatureC <= -273.15) {
-        throw std::runtime_error(
-            "Energy DAE temperature is below absolute zero"
-        );
+    if (variables.temperatureC <= -273.15)
+    {
+        throw std::runtime_error("Energy DAE temperature is below absolute zero");
     }
 
     state.setEnergyJ(
         variables.energyJ
-    );
+        );
 
     state.setPressureBar(
         variables.pressureBar
-    );
+        );
 
     state.setTemperatureC(
         variables.temperatureC
-    );
+        );
 
     return state;
 }
@@ -155,49 +109,27 @@ ReactorState EnergyReactorDae::stateFromVariables(
 EnergyReactorDaeResidual EnergyReactorDae::computeResidual(
     const EnergyReactorDaeVariables& variables,
     const EnergyReactorDaeDerivatives& derivatives
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    requireCompositionSize(
-        variables.massesKg,
-        n,
-        "EnergyReactorDae::computeResidual variables.massesKg"
-    );
-
-    requireCompositionSize(
-        derivatives.massDerivativesKgPerS,
-        n,
-        "EnergyReactorDae::computeResidual derivatives.massDerivativesKgPerS"
-    );
-
     EnergyReactorDaeResidual residual;
-    residual.massResidualsKgPerS =
-        makeComposition(n);
 
     const ReactorState state =
         stateFromVariables(
             variables
-        );
+            );
 
     residual.massBalance =
         reactorModel_.computeMassBalance(
             state
-        );
+            );
 
     residual.energyBalance =
         reactorModel_.computeEnergyBalance(
             state
-        );
+            );
 
-    requireCompositionSize(
-        residual.massBalance.massDerivativesKgPerS,
-        n,
-        "EnergyReactorDae::computeResidual massBalance.massDerivativesKgPerS"
-    );
-
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         residual.massResidualsKgPerS[i] =
             derivatives.massDerivativesKgPerS[i]
             - residual.massBalance.massDerivativesKgPerS[i];
@@ -216,36 +148,48 @@ EnergyReactorDaeResidual EnergyReactorDae::computeResidual(
     return residual;
 }
 
+std::size_t EnergyReactorDae::componentCount() const
+{
+    return reactorModel_.parameters().inletComposition.size();
+}
+
+std::size_t EnergyReactorDae::variableCount() const
+{
+    return componentCount() + 3;
+}
+
+std::size_t EnergyReactorDae::derivativeCount() const
+{
+    return componentCount() + 1;
+}
+
+std::size_t EnergyReactorDae::residualCount() const
+{
+    return componentCount() + 3;
+}
+
 numerics::Vector EnergyReactorDae::variablesToVector(
     const EnergyReactorDaeVariables& variables
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    requireCompositionSize(
-        variables.massesKg,
-        n,
-        "EnergyReactorDae::variablesToVector massesKg"
-    );
-
     numerics::Vector vector(
-        variableCount(),
+        VariableCount,
         0.0
-    );
+        );
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         vector[i] =
             variables.massesKg[i];
     }
 
-    vector[n] =
+    vector[ComponentCount] =
         variables.energyJ;
 
-    vector[n + 1] =
+    vector[ComponentCount + 1] =
         variables.pressureBar;
 
-    vector[n + 2] =
+    vector[ComponentCount + 2] =
         variables.temperatureC;
 
     return vector;
@@ -253,62 +197,49 @@ numerics::Vector EnergyReactorDae::variablesToVector(
 
 EnergyReactorDaeVariables EnergyReactorDae::variablesFromVector(
     const numerics::Vector& vector
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    if (vector.size() != variableCount()) {
-        throw std::invalid_argument(
-            "Energy DAE variable vector has invalid size"
-        );
+    if (vector.size() != VariableCount)
+    {
+        throw std::invalid_argument("Energy DAE variable vector has invalid size");
     }
 
     EnergyReactorDaeVariables variables;
-    variables.massesKg =
-        makeComposition(n);
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         variables.massesKg[i] =
             vector[i];
     }
 
     variables.energyJ =
-        vector[n];
+        vector[ComponentCount];
 
     variables.pressureBar =
-        vector[n + 1];
+        vector[ComponentCount + 1];
 
     variables.temperatureC =
-        vector[n + 2];
+        vector[ComponentCount + 2];
 
     return variables;
 }
 
 numerics::Vector EnergyReactorDae::derivativesToVector(
     const EnergyReactorDaeDerivatives& derivatives
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    requireCompositionSize(
-        derivatives.massDerivativesKgPerS,
-        n,
-        "EnergyReactorDae::derivativesToVector massDerivativesKgPerS"
-    );
-
     numerics::Vector vector(
-        derivativeCount(),
+        DerivativeCount,
         0.0
-    );
+        );
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         vector[i] =
             derivatives.massDerivativesKgPerS[i];
     }
 
-    vector[n] =
+    vector[ComponentCount] =
         derivatives.energyDerivativeW;
 
     return vector;
@@ -316,62 +247,49 @@ numerics::Vector EnergyReactorDae::derivativesToVector(
 
 EnergyReactorDaeDerivatives EnergyReactorDae::derivativesFromVector(
     const numerics::Vector& vector
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    if (vector.size() != derivativeCount()) {
-        throw std::invalid_argument(
-            "Energy DAE derivative vector has invalid size"
-        );
+    if (vector.size() != DerivativeCount)
+    {
+        throw std::invalid_argument("Energy DAE derivative vector has invalid size");
     }
 
     EnergyReactorDaeDerivatives derivatives;
-    derivatives.massDerivativesKgPerS =
-        makeComposition(n);
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         derivatives.massDerivativesKgPerS[i] =
             vector[i];
     }
 
     derivatives.energyDerivativeW =
-        vector[n];
+        vector[ComponentCount];
 
     return derivatives;
 }
 
 numerics::Vector EnergyReactorDae::residualToVector(
     const EnergyReactorDaeResidual& residual
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
-    requireCompositionSize(
-        residual.massResidualsKgPerS,
-        n,
-        "EnergyReactorDae::residualToVector massResidualsKgPerS"
-    );
-
     numerics::Vector vector(
-        residualCount(),
+        ResidualCount,
         0.0
-    );
+        );
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         vector[i] =
             residual.massResidualsKgPerS[i];
     }
 
-    vector[n] =
+    vector[ComponentCount] =
         residual.energyResidualW;
 
-    vector[n + 1] =
+    vector[ComponentCount + 1] =
         residual.volumeResidualM3;
 
-    vector[n + 2] =
+    vector[ComponentCount + 2] =
         residual.inventoryEnergyResidualJ;
 
     return vector;
@@ -380,36 +298,33 @@ numerics::Vector EnergyReactorDae::residualToVector(
 numerics::Vector EnergyReactorDae::computeResidualVector(
     const numerics::Vector& variablesVector,
     const numerics::Vector& derivativesVector
-) const
+    ) const
 {
     const EnergyReactorDaeVariables variables =
         variablesFromVector(
             variablesVector
-        );
+            );
 
     const EnergyReactorDaeDerivatives derivatives =
         derivativesFromVector(
             derivativesVector
-        );
+            );
 
     const EnergyReactorDaeResidual residual =
         computeResidual(
             variables,
             derivatives
-        );
+            );
 
     return residualToVector(
         residual
-    );
+        );
 }
 
 std::string EnergyReactorDae::residualToString(
     const EnergyReactorDaeResidual& residual
-) const
+    ) const
 {
-    const std::size_t n =
-        componentCount();
-
     std::ostringstream out;
 
     out << std::fixed << std::setprecision(10);
@@ -417,7 +332,8 @@ std::string EnergyReactorDae::residualToString(
     out << "Energy reactor DAE residual:\n";
 
     out << "  Mass residuals:\n";
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         out << "    R_M[" << i << "] = "
             << residual.massResidualsKgPerS[i]
             << " kg/s\n";
@@ -437,7 +353,9 @@ std::string EnergyReactorDae::residualToString(
         << " J\n";
 
     out << "  Underlying balances:\n";
-    for (std::size_t i = 0; i < n; ++i) {
+
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         out << "    f_M[" << i << "] = "
             << residual.massBalance.massDerivativesKgPerS[i]
             << " kg/s\n";
@@ -469,28 +387,20 @@ std::string EnergyReactorDae::residualToString(
 
 EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
     const ReactorState& oldState,
-    const double timeStepS
-) const
+    double timeStepS
+    ) const
 {
-    if (timeStepS <= 0.0) {
-        throw std::invalid_argument(
-            "Time step must be positive"
-        );
-    }
-
-    const std::size_t n =
-        oldState.componentCount();
-
-    if (n != componentCount()) {
-        throw std::runtime_error(
-            "EnergyReactorDae::radauIIA3Step oldState component count differs from DAE component count"
-        );
+    if (timeStepS <= 0.0)
+    {
+        throw std::invalid_argument("Time step must be positive");
     }
 
     constexpr int StageCount = 3;
 
-    const std::size_t stageUnknownCount =
-        n + 3;
+    // Stage unknowns:
+    // dM(C2H6)/dt, dM(C5H12)/dt, dM(H2O)/dt, dE/dt, P, T
+    constexpr std::size_t StageUnknownCount =
+        ComponentCount + 3;
 
     const double sqrt6 =
         std::sqrt(6.0);
@@ -534,35 +444,30 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
     const EnergyReactorDaeVariables oldVariables =
         variablesFromState(oldState);
 
+    const numerics::Vector oldVariableVector =
+        variablesToVector(oldVariables);
+
     const MassBalanceResult oldMassBalance =
         reactorModel_.computeMassBalance(oldState);
 
     const EnergyBalanceResult oldEnergyBalance =
         reactorModel_.computeEnergyBalance(oldState);
 
-    requireCompositionSize(
-        oldMassBalance.massDerivativesKgPerS,
-        n,
-        "EnergyReactorDae::radauIIA3Step oldMassBalance.massDerivativesKgPerS"
-    );
-
     auto makePressureGuess =
-        [this, &oldState, n](const Composition& masses)
+        [this, &oldState](const std::array<double, ComponentCount>& masses)
     {
-        requireCompositionSize(
-            masses,
-            n,
-            "EnergyReactorDae::makePressureGuess masses"
-        );
-
         ReactorState guessState =
             oldState;
 
-        for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t i = 0; i < ComponentCount; ++i)
+        {
+            const Component component =
+                static_cast<Component>(i);
+
             guessState.setMassKg(
-                i,
+                component,
                 std::max(0.0, masses[i])
-            );
+                );
         }
 
         const PressureInitializationResult pressureGuess =
@@ -573,9 +478,10 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                 1.0e-6,
                 15,
                 true
-            );
+                );
 
-        if (pressureGuess.converged) {
+        if (pressureGuess.converged)
+        {
             return pressureGuess.pressureBar;
         }
 
@@ -583,86 +489,111 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
     };
 
     numerics::Vector initialGuess(
-        StageCount * stageUnknownCount,
+        StageCount * StageUnknownCount,
         0.0
-    );
+        );
 
-    for (int stage = 0; stage < StageCount; ++stage) {
+    for (int stage = 0; stage < StageCount; ++stage)
+    {
         double c = c3;
 
-        if (stage == 0) {
+        if (stage == 0)
+        {
             c = c1;
         }
-        else if (stage == 1) {
+        else if (stage == 1)
+        {
             c = c2;
         }
 
-        Composition stageMassGuess =
-            makeComposition(n);
+        std::array<double, ComponentCount> stageMassGuess{};
 
-        const std::size_t offset =
-            static_cast<std::size_t>(stage) * stageUnknownCount;
-
-        for (std::size_t i = 0; i < n; ++i) {
+        for (std::size_t i = 0; i < ComponentCount; ++i)
+        {
             stageMassGuess[i] =
                 oldVariables.massesKg[i]
                 + timeStepS
                       * c
                       * oldMassBalance.massDerivativesKgPerS[i];
 
-            initialGuess[offset + i] =
+            initialGuess[
+                static_cast<std::size_t>(stage) * StageUnknownCount
+                + i
+            ] =
                 oldMassBalance.massDerivativesKgPerS[i];
         }
 
-        initialGuess[offset + n] =
+        initialGuess[
+            static_cast<std::size_t>(stage) * StageUnknownCount
+            + ComponentCount
+        ] =
             oldEnergyBalance.energyDerivativeW;
 
-        initialGuess[offset + n + 1] =
+        initialGuess[
+            static_cast<std::size_t>(stage) * StageUnknownCount
+            + ComponentCount + 1
+        ] =
             makePressureGuess(stageMassGuess);
 
-        initialGuess[offset + n + 2] =
+        initialGuess[
+            static_cast<std::size_t>(stage) * StageUnknownCount
+            + ComponentCount + 2
+        ] =
             oldState.temperatureC();
     }
 
     auto stageMassDerivative =
-        [stageUnknownCount](const numerics::Vector& unknowns, int stage, std::size_t component)
+        [](const numerics::Vector& unknowns, int stage, std::size_t component)
     {
+        constexpr std::size_t blockSize =
+            ComponentCount + 3;
+
         return unknowns[
-            static_cast<std::size_t>(stage) * stageUnknownCount
+            static_cast<std::size_t>(stage) * blockSize
             + component
         ];
     };
 
     auto stageEnergyDerivative =
-        [stageUnknownCount, n](const numerics::Vector& unknowns, int stage)
+        [](const numerics::Vector& unknowns, int stage)
     {
+        constexpr std::size_t blockSize =
+            ComponentCount + 3;
+
         return unknowns[
-            static_cast<std::size_t>(stage) * stageUnknownCount
-            + n
+            static_cast<std::size_t>(stage) * blockSize
+            + ComponentCount
         ];
     };
 
     auto stagePressure =
-        [stageUnknownCount, n](const numerics::Vector& unknowns, int stage)
+        [](const numerics::Vector& unknowns, int stage)
     {
+        constexpr std::size_t blockSize =
+            ComponentCount + 3;
+
         return unknowns[
-            static_cast<std::size_t>(stage) * stageUnknownCount
-            + n + 1
+            static_cast<std::size_t>(stage) * blockSize
+            + ComponentCount + 1
         ];
     };
 
     auto stageTemperature =
-        [stageUnknownCount, n](const numerics::Vector& unknowns, int stage)
+        [](const numerics::Vector& unknowns, int stage)
     {
+        constexpr std::size_t blockSize =
+            ComponentCount + 3;
+
         return unknowns[
-            static_cast<std::size_t>(stage) * stageUnknownCount
-            + n + 2
+            static_cast<std::size_t>(stage) * blockSize
+            + ComponentCount + 2
         ];
     };
 
     double massResidualScaleKgPerS = 0.0;
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         massResidualScaleKgPerS +=
             std::abs(oldMassBalance.massDerivativesKgPerS[i]);
     }
@@ -671,7 +602,7 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
         std::max(
             1.0e-3,
             massResidualScaleKgPerS
-        );
+            );
 
     const double energyResidualScaleW =
         std::max(
@@ -680,24 +611,22 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                 + std::abs(oldEnergyBalance.outletEnthalpyFlowW)
                 + std::abs(oldEnergyBalance.heatTransferW)
                 + std::abs(oldEnergyBalance.energyDerivativeW)
-        );
+            );
 
     const double volumeResidualScaleM3 =
         std::max(
             1.0,
             reactorModel_.parameters().volumeM3
-        );
+            );
 
     const double inventoryEnergyResidualScaleJ =
         std::max(
             1.0e6,
             std::abs(oldVariables.energyJ)
-        );
+            );
 
     auto residualFunction =
         [this,
-         n,
-         stageUnknownCount,
          oldVariables,
          timeStepS,
          stageMassDerivative,
@@ -719,31 +648,26 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
          a33]
         (const numerics::Vector& unknowns)
     {
-        const std::size_t totalUnknownCount =
-            3 * stageUnknownCount;
+        constexpr std::size_t totalUnknownCount =
+            3 * (ComponentCount + 3);
 
-        if (unknowns.size() != totalUnknownCount) {
-            throw std::runtime_error(
-                "Energy Radau IIA 3 unknown vector has invalid size"
-            );
+        if (unknowns.size() != totalUnknownCount)
+        {
+            throw std::runtime_error("Energy Radau IIA 3 unknown vector has invalid size");
         }
 
         numerics::Vector totalResidual(
             totalUnknownCount,
             0.0
-        );
+            );
 
-        for (int stage = 0; stage < 3; ++stage) {
+        for (int stage = 0; stage < 3; ++stage)
+        {
             EnergyReactorDaeVariables variables;
             EnergyReactorDaeDerivatives derivatives;
 
-            variables.massesKg =
-                makeComposition(n);
-
-            derivatives.massDerivativesKgPerS =
-                makeComposition(n);
-
-            for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < ComponentCount; ++i)
+            {
                 const double k1 =
                     stageMassDerivative(unknowns, 0, i);
 
@@ -756,32 +680,35 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                 double mass =
                     oldVariables.massesKg[i];
 
-                if (stage == 0) {
+                if (stage == 0)
+                {
                     mass +=
                         timeStepS
                         * (
                             a11 * k1
                             + a12 * k2
                             + a13 * k3
-                        );
+                            );
                 }
-                else if (stage == 1) {
+                else if (stage == 1)
+                {
                     mass +=
                         timeStepS
                         * (
                             a21 * k1
                             + a22 * k2
                             + a23 * k3
-                        );
+                            );
                 }
-                else {
+                else
+                {
                     mass +=
                         timeStepS
                         * (
                             a31 * k1
                             + a32 * k2
                             + a33 * k3
-                        );
+                            );
                 }
 
                 variables.massesKg[i] =
@@ -792,7 +719,7 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                         unknowns,
                         stage,
                         i
-                    );
+                        );
             }
 
             const double e1 =
@@ -807,32 +734,35 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
             double energy =
                 oldVariables.energyJ;
 
-            if (stage == 0) {
+            if (stage == 0)
+            {
                 energy +=
                     timeStepS
                     * (
                         a11 * e1
                         + a12 * e2
                         + a13 * e3
-                    );
+                        );
             }
-            else if (stage == 1) {
+            else if (stage == 1)
+            {
                 energy +=
                     timeStepS
                     * (
                         a21 * e1
                         + a22 * e2
                         + a23 * e3
-                    );
+                        );
             }
-            else {
+            else
+            {
                 energy +=
                     timeStepS
                     * (
                         a31 * e1
                         + a32 * e2
                         + a33 * e3
-                    );
+                        );
             }
 
             variables.energyJ =
@@ -842,50 +772,51 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                 stagePressure(
                     unknowns,
                     stage
-                );
+                    );
 
             variables.temperatureC =
                 stageTemperature(
                     unknowns,
                     stage
-                );
+                    );
 
             derivatives.energyDerivativeW =
                 stageEnergyDerivative(
                     unknowns,
                     stage
-                );
+                    );
 
             const EnergyReactorDaeResidual stageResidual =
                 computeResidual(
                     variables,
                     derivatives
-                );
+                    );
 
             const numerics::Vector stageResidualVector =
                 residualToVector(
                     stageResidual
-                );
+                    );
 
             const std::size_t offset =
-                static_cast<std::size_t>(stage) * stageUnknownCount;
+                static_cast<std::size_t>(stage) * residualCount;
 
-            for (std::size_t i = 0; i < n; ++i) {
+            for (std::size_t i = 0; i < ComponentCount; ++i)
+            {
                 totalResidual[offset + i] =
                     stageResidualVector[i]
                     / massResidualScaleKgPerS;
             }
 
-            totalResidual[offset + n] =
-                stageResidualVector[n]
+            totalResidual[offset + ComponentCount] =
+                stageResidualVector[ComponentCount]
                 / energyResidualScaleW;
 
-            totalResidual[offset + n + 1] =
-                stageResidualVector[n + 1]
+            totalResidual[offset + ComponentCount + 1] =
+                stageResidualVector[ComponentCount + 1]
                 / volumeResidualScaleM3;
 
-            totalResidual[offset + n + 2] =
-                stageResidualVector[n + 2]
+            totalResidual[offset + ComponentCount + 2] =
+                stageResidualVector[ComponentCount + 2]
                 / inventoryEnergyResidualScaleJ;
         }
 
@@ -904,28 +835,18 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
         std::numeric_limits<double>::infinity();
 
     options.lowerBounds =
-        numerics::Vector(
-            StageCount * stageUnknownCount,
-            -inf
-        );
-
-    for (int stage = 0; stage < StageCount; ++stage) {
-        const std::size_t offset =
-            static_cast<std::size_t>(stage) * stageUnknownCount;
-
-        options.lowerBounds[offset + n + 1] =
-            0.01;
-
-        options.lowerBounds[offset + n + 2] =
-            -273.14;
-    }
+        numerics::Vector{
+            -inf, -inf, -inf, -inf, 0.01, -273.14,
+            -inf, -inf, -inf, -inf, 0.01, -273.14,
+            -inf, -inf, -inf, -inf, 0.01, -273.14
+        };
 
     const numerics::NewtonResult newtonResult =
         numerics::NewtonSolver::solve(
             residualFunction,
             initialGuess,
             options
-        );
+            );
 
     EnergyReactorDaeStepResult result;
 
@@ -951,30 +872,29 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
         "energy_radau_iia_3";
 
     EnergyReactorDaeVariables finalVariables;
-    finalVariables.massesKg =
-        makeComposition(n);
 
-    for (std::size_t i = 0; i < n; ++i) {
+    for (std::size_t i = 0; i < ComponentCount; ++i)
+    {
         const double k1 =
             stageMassDerivative(
                 newtonResult.solution,
                 0,
                 i
-            );
+                );
 
         const double k2 =
             stageMassDerivative(
                 newtonResult.solution,
                 1,
                 i
-            );
+                );
 
         const double k3 =
             stageMassDerivative(
                 newtonResult.solution,
                 2,
                 i
-            );
+                );
 
         finalVariables.massesKg[i] =
             oldVariables.massesKg[i]
@@ -983,26 +903,26 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                       a31 * k1
                       + a32 * k2
                       + a33 * k3
-                  );
+                      );
     }
 
     const double e1 =
         stageEnergyDerivative(
             newtonResult.solution,
             0
-        );
+            );
 
     const double e2 =
         stageEnergyDerivative(
             newtonResult.solution,
             1
-        );
+            );
 
     const double e3 =
         stageEnergyDerivative(
             newtonResult.solution,
             2
-        );
+            );
 
     finalVariables.energyJ =
         oldVariables.energyJ
@@ -1011,36 +931,36 @@ EnergyReactorDaeStepResult EnergyReactorDae::radauIIA3Step(
                   a31 * e1
                   + a32 * e2
                   + a33 * e3
-              );
+                  );
 
     finalVariables.pressureBar =
         stagePressure(
             newtonResult.solution,
             2
-        );
+            );
 
     finalVariables.temperatureC =
         stageTemperature(
             newtonResult.solution,
             2
-        );
+            );
 
     result.state =
         stateFromVariables(
             finalVariables
-        );
+            );
 
     result.variables =
         variablesToVector(
             finalVariables
-        );
+            );
 
     return result;
 }
 
 std::string EnergyReactorDae::stepResultToString(
     const EnergyReactorDaeStepResult& result
-) const
+    ) const
 {
     std::ostringstream out;
 
@@ -1065,10 +985,13 @@ std::string EnergyReactorDae::stepResultToString(
 
     out << "\n  Residual vector:\n";
 
-    for (std::size_t i = 0; i < result.residual.size(); ++i) {
+    for (std::size_t i = 0; i < result.residual.size(); ++i)
+    {
         out << "    R[" << i << "] = "
             << result.residual[i] << "\n";
     }
 
     return out.str();
 }
+
+

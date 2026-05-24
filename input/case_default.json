@@ -6,11 +6,7 @@
     "component_properties_csv": "data/chemsep_components_properties.csv"
   },
 
-  "components": [
-    "H2O",
-    "C2H6",
-    "C5H12"
-  ],
+  "components": ["C5H12", "H2O"],
 
   "thermo": {
     "eos": "PengRobinson",
@@ -24,7 +20,7 @@
     "temperature_C": 25.0,
     "flow_kmol_per_s": 0.001,
     "composition_basis": "mole_fraction",
-    "composition": [0.0, 0.5, 0.5]
+    "composition": [0.2, 0.8]
   },
 
   "reactor": {
@@ -47,7 +43,7 @@
   "initial_state": {
     "temperature_C": 100.0,
     "pressure_bar": 2.5,
-    "component_masses_kg": [500.0, 0.0, 1.0],
+    "component_masses_kg": [500.0, 1.0],
 
     "pressure_initialization": {
       "pressure_min_Pa": 10000.0,
@@ -59,7 +55,7 @@
   },
 
   "reactions": {
-    "enabled": true,
+    "enabled": false,
     "forward_rate_constant_1_per_s": 100.0,
     "reverse_rate_constant_1_per_s": 100.0
   },
