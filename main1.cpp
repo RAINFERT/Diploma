@@ -1,37 +1,27 @@
 #include "mainwindow.h"
 
 #include "core/ReactorState.h"
-#include "core/dae/EnergyReactorDae.h"
 #include "core/models/WellStirredReactorModel.h"
 #include "core/reactions/ReactionModel.h"
-#include "core/simulation/EnergyReactorSimulation.h"
 #include "core/thermo/ThermoPackage.h"
+#include "core/dae/EnergyReactorDae.h"
+#include "core/simulation/EnergyReactorSimulation.h"
 #include "core/config/SimulationConfigLoader.h"
 #include "core/properties/ComponentDatabaseLoader.h"
 #include "core/properties/ComponentSetBuilder.h"
 
 #include <QApplication>
 #include <QDir>
-
 #include <cstddef>
 #include <exception>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <sstream>
-#include <stdexcept>
 #include <string>
-#include <vector>
+#include <fstream>
+#include <sstream>
 
 namespace
 {
-    void printSectionTitle(const std::string& title)
-    {
-        std::cout << "\n========================================\n";
-        std::cout << title << "\n";
-        std::cout << "========================================\n";
-    }
-
     WellStirredReactorParameters makeReactorParameters(
         const SimulationConfig& config
     )
@@ -50,7 +40,6 @@ namespace
         parameters.inletTemperatureC =
             config.feed.temperatureC;
 
-        // Composition is already ordered exactly like config.components / ComponentSet.
         parameters.inletComposition =
             config.feed.composition;
 
@@ -78,46 +67,49 @@ namespace
     ReactorState makeInitialState(
         const SimulationConfig& config,
         const ComponentSet& componentSet
-    )
+        )
     {
-        std::vector<std::string> componentNames;
-        std::vector<double> molarMassesKgPerKmol;
+        std::vector<std::string> names;
+        std::vector<double> molarMasses;
 
-        componentNames.reserve(componentSet.size());
-        molarMassesKgPerKmol.reserve(componentSet.size());
+        names.reserve(componentSet.size());
+        molarMasses.reserve(componentSet.size());
 
         for (std::size_t i = 0; i < componentSet.size(); ++i) {
-            componentNames.push_back(componentSet.key(i));
-            molarMassesKgPerKmol.push_back(
+            names.push_back(
+                componentSet.key(i)
+                );
+
+            molarMasses.push_back(
                 componentSet.material(i).molarMassKgPerKmol
-            );
+                );
         }
 
         ReactorState state(
-            componentNames,
-            molarMassesKgPerKmol
-        );
+            names,
+            molarMasses
+            );
 
         if (config.initialState.componentMassesKg.size() != componentSet.size()) {
             throw std::runtime_error(
                 "Initial component mass vector size differs from ComponentSet size"
-            );
+                );
         }
 
         for (std::size_t i = 0; i < componentSet.size(); ++i) {
             state.setMassKg(
                 i,
                 config.initialState.componentMassesKg[i]
-            );
+                );
         }
 
         state.setTemperatureC(
             config.initialState.temperatureC
-        );
+            );
 
         state.setPressureBar(
             config.initialState.pressureBar
-        );
+            );
 
         state.setEnergyJ(0.0);
 
@@ -139,9 +131,16 @@ namespace
         return options;
     }
 
+    void printSectionTitle(const std::string& title)
+    {
+        std::cout << "\n========================================\n";
+        std::cout << title << "\n";
+        std::cout << "========================================\n";
+    }
+
     std::string pressureInitializationSummaryToString(
         const PressureInitializationResult& result
-    )
+        )
     {
         std::ostringstream stream;
 
@@ -157,25 +156,17 @@ namespace
         return stream.str();
     }
 
-    void printPressureInitializationSummary(
-        const PressureInitializationResult& result
-    )
-    {
-        printSectionTitle("Pressure initialization summary");
-        std::cout << pressureInitializationSummaryToString(result);
-    }
-
     void writeTextFile(
         const std::string& path,
         const std::string& text
-    )
+        )
     {
         std::ofstream file(path);
 
         if (!file.is_open()) {
             throw std::runtime_error(
                 "Cannot open output file for writing: " + path
-            );
+                );
         }
 
         file << text;
@@ -184,20 +175,20 @@ namespace
     std::string makeOutputPath(
         const OutputConfig& output,
         const std::string& fileName
-    )
+        )
     {
         QDir directory(
             QString::fromStdString(output.directory)
-        );
+            );
 
         return directory.filePath(
-            QString::fromStdString(fileName)
-        ).toStdString();
+                            QString::fromStdString(fileName)
+                            ).toStdString();
     }
 
     void ensureOutputDirectory(
         const OutputConfig& output
-    )
+        )
     {
         if (!output.enabled) {
             return;
@@ -208,18 +199,28 @@ namespace
         const bool created =
             directory.mkpath(
                 QString::fromStdString(output.directory)
-            );
+                );
 
         if (!created) {
             throw std::runtime_error(
-                "Cannot create output directory: " + output.directory
-            );
+                "Cannot create output directory: " +
+                output.directory
+                );
         }
+    }
+
+    void printPressureInitializationSummary(
+        const PressureInitializationResult& result
+        )
+    {
+        printSectionTitle("Pressure initialization summary");
+
+        std::cout << pressureInitializationSummaryToString(result);
     }
 
     void printSelectedChemsepComponents(
         const ComponentSet& componentSet
-    )
+        )
     {
         printSectionTitle("Selected ChemSep components");
 
@@ -248,7 +249,7 @@ namespace
 
     void printThermoPackageMaterials(
         const ComponentSet& componentSet
-    )
+        )
     {
         printSectionTitle("ThermoPackage materials");
 
@@ -276,7 +277,7 @@ namespace
 
     void printThermoPackageEnthalpyData(
         const ComponentSet& componentSet
-    )
+        )
     {
         printSectionTitle("ThermoPackage enthalpy data");
 
@@ -301,20 +302,13 @@ namespace
 
         std::cout << std::endl;
     }
-
-    bool canUseLegacyEnergyResultTable(
-        const ComponentSet& componentSet
-    )
-    {
-        return componentSet.size() == ComponentCount;
-    }
 }
+
 
 int main(int argc, char* argv[])
 {
-    try {
-        QApplication app(argc, argv);
-
+    try
+    {
         const std::string configPath =
             (argc > 1)
                 ? std::string(argv[1])
@@ -328,20 +322,22 @@ int main(int argc, char* argv[])
         const ComponentDatabase componentDatabase =
             ComponentDatabaseLoader::loadFromCsv(
                 config.dataSources.componentPropertiesCsv
-            );
+                );
 
         const ComponentSet componentSet =
             ComponentSetBuilder::build(
                 config,
                 componentDatabase
-            );
+                );
 
         std::cout << "Loaded ChemSep component database: "
                   << componentDatabase.size()
                   << " components\n";
 
         if (config.diagnostics.printMaterials) {
-            printSelectedChemsepComponents(componentSet);
+            printSelectedChemsepComponents(
+                componentSet
+                );
         }
 
         std::cout << "Loaded simulation config: "
@@ -358,40 +354,27 @@ int main(int argc, char* argv[])
             componentSet.materials(),
             componentSet.enthalpyData(),
             flashMode
-        );
+            );
+
+        if (config.diagnostics.printMaterials) {
+            printThermoPackageMaterials(
+                componentSet
+                );
+
+            printThermoPackageEnthalpyData(
+                componentSet
+                );
+        }
 
         std::cout << "Thermo flash mode = "
                   << thermoFlashModeToString(thermo.flashMode())
                   << "\n";
 
-        if (config.diagnostics.printMaterials) {
-            printThermoPackageMaterials(componentSet);
-            printThermoPackageEnthalpyData(componentSet);
-        }
-
         ReactorState initialState =
             makeInitialState(
                 config,
                 componentSet
-            );
-
-        if (config.diagnostics.printInitialState) {
-            printSectionTitle("Initial reactor state");
-            std::cout << initialState.toString() << std::endl;
-        }
-
-        if (
-            config.output.enabled &&
-            config.output.writeInitialState
-        ) {
-            writeTextFile(
-                makeOutputPath(
-                    config.output,
-                    config.output.initialStateFile
-                ),
-                initialState.toString()
-            );
-        }
+                );
 
         ReactionModel reactionModel(
             thermo.materials()
@@ -399,9 +382,10 @@ int main(int argc, char* argv[])
 
         reactionModel.setEnabled(
             config.reactions.enabled
-        );
+            );
 
-        if (config.reactions.enabled) {
+        if (config.reactions.enabled)
+        {
             reactionModel.setForwardRateConstant(
                 config.reactions.forwardRateConstant1PerS
             );
@@ -410,7 +394,8 @@ int main(int argc, char* argv[])
                 config.reactions.reverseRateConstant1PerS
             );
         }
-        else {
+        else
+        {
             reactionModel.setForwardRateConstant(0.0);
             reactionModel.setReverseRateConstant(0.0);
         }
@@ -423,6 +408,30 @@ int main(int argc, char* argv[])
             thermo,
             reactionModel
         );
+
+        EnergyReactorDae energyDae(
+            reactorModel
+        );
+
+        if (config.diagnostics.printInitialState)
+        {
+            printSectionTitle("Initial reactor state");
+            std::cout << initialState.toString() << std::endl;
+        }
+
+        if (
+            config.output.enabled &&
+            config.output.writeInitialState
+            )
+        {
+            writeTextFile(
+                makeOutputPath(
+                    config.output,
+                    config.output.initialStateFile
+                    ),
+                initialState.toString()
+                );
+        }
 
         const PressureInitializationConfig& pressureConfig =
             config.initialState.pressureInitialization;
@@ -437,30 +446,33 @@ int main(int argc, char* argv[])
                 pressureConfig.fallbackToBisection
             );
 
-        if (config.diagnostics.runPressureInitializationDiagnostic) {
+        if (config.diagnostics.runPressureInitializationDiagnostic)
+        {
             printPressureInitializationSummary(
                 pressureInitialization
             );
         }
 
+        if (!pressureInitialization.converged)
+        {
+            std::cerr << "Pressure initialization failed. Stop simulation.\n";
+            return 1;
+        }
+
         if (
             config.output.enabled &&
             config.output.writePressureInitialization
-        ) {
+            )
+        {
             writeTextFile(
                 makeOutputPath(
                     config.output,
                     config.output.pressureInitializationFile
-                ),
+                    ),
                 pressureInitializationSummaryToString(
                     pressureInitialization
-                )
-            );
-        }
-
-        if (!pressureInitialization.converged) {
-            std::cerr << "Pressure initialization failed. Stop simulation.\n";
-            return 1;
+                    )
+                );
         }
 
         const ReactorState initializedState =
@@ -468,13 +480,13 @@ int main(int argc, char* argv[])
                 pressureInitialization.initializedState
             );
 
-        // Important for arbitrary component counts:
-        // EnergyReactorDae must be created after initializedState is known,
-        // because the DAE needs this state as its component-structure prototype.
-        EnergyReactorDae energyDae(
-            reactorModel,
-            initializedState
+        EnergyReactorSimulationRunner energySimulationRunner(
+            energyDae,
+            reactorModel
         );
+
+        const EnergyReactorSimulationOptions energySimulationOptions =
+            makeEnergySimulationOptions(config);
 
         std::cout << "DEBUG: initializedState.componentCount = "
                   << initializedState.componentCount()
@@ -488,42 +500,23 @@ int main(int argc, char* argv[])
                   << reactorModel.parameters().inletComposition.size()
                   << "\n";
 
-        const EnergyReactorSimulationOptions energySimulationOptions =
-            makeEnergySimulationOptions(config);
-
-        EnergyReactorSimulationRunner energySimulationRunner(
-            energyDae,
-            reactorModel
-        );
-
         const EnergyReactorSimulationResult energySimulationResult =
             energySimulationRunner.runRadauIIA3(
                 initializedState,
                 energySimulationOptions
             );
 
-        ReactorState finalState =
-            initializedState;
-
-        if (!energySimulationResult.points.empty()) {
-            finalState =
-                energySimulationResult.finalState();
-        }
-
-        std::string resultTable;
-
-        if (canUseLegacyEnergyResultTable(componentSet)) {
-            resultTable =
-                energySimulationRunner.resultTableToString(
-                    energySimulationResult,
-                    config.solver.printEvery
+        const std::string resultTable =
+            energySimulationRunner.resultTableToString(
+                energySimulationResult,
+                config.solver.printEvery
                 );
-        }
 
-        if (config.diagnostics.runEnergyRadauSimulationDiagnostic) {
+        if (config.diagnostics.runEnergyRadauSimulationDiagnostic)
+        {
             printSectionTitle(
                 "Energy Radau IIA 3-stage DAE simulation diagnostic"
-            );
+                );
 
             std::cout << "dt = "
                       << energySimulationOptions.timeStepS
@@ -533,37 +526,43 @@ int main(int argc, char* argv[])
                       << energySimulationOptions.stepCount
                       << "\n\n";
 
-            if (!resultTable.empty()) {
-                std::cout << resultTable << std::endl;
-            }
-            else {
-                std::cout
-                    << "Result table is temporarily skipped for non-legacy component counts.\n"
-                    << "Final state is printed below.\n\n";
-            }
+            std::cout << resultTable << std::endl;
         }
 
         if (
             config.output.enabled &&
-            config.output.writeResultTable &&
-            !resultTable.empty()
-        ) {
+            config.output.writeResultTable
+            )
+        {
             writeTextFile(
                 makeOutputPath(
                     config.output,
                     config.output.resultTableFile
-                ),
+                    ),
                 resultTable
-            );
+                );
         }
 
-        if (!energySimulationResult.converged) {
-            std::cout << "Energy simulation failed: "
+        if (!energySimulationResult.converged)
+        {
+            std::cerr << "Energy simulation failed: "
                       << energySimulationResult.message
                       << std::endl;
+
+            return 1;
         }
 
-        if (config.diagnostics.printFinalState) {
+        ReactorState finalState =
+            initializedState;
+
+        if (!energySimulationResult.points.empty())
+        {
+            finalState =
+                energySimulationResult.finalState();
+        }
+
+        if (config.diagnostics.printFinalState)
+        {
             printSectionTitle("Final reactor state");
             std::cout << finalState.toString() << std::endl;
         }
@@ -571,22 +570,26 @@ int main(int argc, char* argv[])
         if (
             config.output.enabled &&
             config.output.writeFinalState
-        ) {
+            )
+        {
             writeTextFile(
                 makeOutputPath(
                     config.output,
                     config.output.finalStateFile
-                ),
+                    ),
                 finalState.toString()
-            );
+                );
         }
+
+        QApplication app(argc, argv);
 
         MainWindow window;
         window.show();
 
         return app.exec();
     }
-    catch (const std::exception& exception) {
+    catch (const std::exception& exception)
+    {
         std::cerr << "\nFatal error:\n"
                   << exception.what()
                   << "\n";
