@@ -3,9 +3,10 @@
 #include "../Component.h"
 #include "Material.h"
 
-#include <array>
+#include <vector>
 #include <cstddef>
 #include <string>
+#include <array>
 
 struct ComponentEnthalpyData
 {
@@ -14,7 +15,7 @@ struct ComponentEnthalpyData
     double referenceTemperatureK = 298.15;
     double referenceMolarEnthalpyJPerKmol = 0.0;
 
-    // Cp(T) = A + B*T + C*T^2 + D*T^3 + E/T^2
+    // Cp(T) = A + B*T + C*T^2 + D*T^3 + E*T^4
     // J/(kmol*K)
     double cpA = 0.0;
     double cpB = 0.0;
@@ -23,8 +24,7 @@ struct ComponentEnthalpyData
     double cpE = 0.0;
 };
 
-using ComponentEnthalpyDataList =
-    std::array<ComponentEnthalpyData, ComponentCount>;
+using ComponentEnthalpyDataList = std::vector<ComponentEnthalpyData>;
 
 ComponentEnthalpyDataList createDefaultEnthalpyData();
 

@@ -1,8 +1,9 @@
 #include "EnthalpyModel.h"
 
+#include <array>
 #include <cmath>
 #include <stdexcept>
-#include <algorithm>
+#include <vector>
 
 double EnthalpyModel::idealGasMixtureMolarEnthalpyJPerKmol(
     double temperatureK,
@@ -68,37 +69,43 @@ double EnthalpyModel::pengRobinsonDepartureEnthalpyJPerKmol(
     constexpr double R = 8314.46261815324; // J/(kmol*K)
     constexpr double sqrt2 = 1.4142135623730951;
 
-    std::array<double, ComponentCount> aPure{};
-    std::array<double, ComponentCount> daPureDt{};
-    std::array<double, ComponentCount> bPure{};
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "EnthalpyModel::pengRobinsonDepartureEnthalpyJPerKmol composition"
+        );
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
-    {
-        const Material& material =
-            materials_[i];
+    std::vector<double> aPure(
+        materials_.size(),
+        0.0
+        );
 
-        const double tc =
-            material.criticalTemperatureK;
+    std::vector<double> daPureDt(
+        materials_.size(),
+        0.0
+        );
 
-        const double pc =
-            material.criticalPressurePa;
+    std::vector<double> bPure(
+        materials_.size(),
+        0.0
+        );
 
-        const double omega =
-            material.acentricFactor;
+    for (std::size_t i = 0; i < materials_.size(); ++i) {
+        const Material& material = materials_[i];
 
-        if (tc <= 0.0 || pc <= 0.0)
-        {
-            throw std::runtime_error("Invalid critical property in PR enthalpy departure");
+        const double tc = material.criticalTemperatureK;
+        const double pc = material.criticalPressurePa;
+        const double omega = material.acentricFactor;
+
+        if (tc <= 0.0 || pc <= 0.0) {
+            throw std::runtime_error(
+                "Invalid critical property in PR enthalpy departure"
+                );
         }
 
-        const double tr =
-            temperatureK / tc;
-
-        const double sqrtTr =
-            std::sqrt(tr);
-
-        const double kappa =
-            pengRobinsonKappa(omega);
+        const double tr = temperatureK / tc;
+        const double sqrtTr = std::sqrt(tr);
+        const double kappa = pengRobinsonKappa(omega);
 
         const double alphaRoot =
             1.0 + kappa * (1.0 - sqrtTr);
@@ -145,10 +152,10 @@ double EnthalpyModel::pengRobinsonDepartureEnthalpyJPerKmol(
         throw std::invalid_argument("Composition sum must be positive in PR enthalpy departure");
     }
 
-    Composition normalizedComposition{};
+    Composition normalizedComposition =
+        makeComposition(materials_.size());
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
-    {
+    for (std::size_t i = 0; i < materials_.size(); ++i) {
         normalizedComposition[i] =
             composition[i] / compositionSum;
     }
@@ -157,12 +164,12 @@ double EnthalpyModel::pengRobinsonDepartureEnthalpyJPerKmol(
     double daMixDt = 0.0;
     double bMix = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         bMix +=
             normalizedComposition[i] * bPure[i];
 
-        for (std::size_t j = 0; j < ComponentCount; ++j)
+        for (std::size_t j = 0; j < materials_.size(); ++j)
         {
             const double oneMinusKij =
                 1.0 - binaryInteractionParameter(i, j);
@@ -259,7 +266,7 @@ double EnthalpyModel::phaseMolarEnthalpyJPerKmol(
 
 ComponentEnthalpyDataList createDefaultEnthalpyData()
 {
-    ComponentEnthalpyDataList data{};
+    ComponentEnthalpyDataList data(ComponentCount);
 
     // ВАЖНО:
     // Это временные приближенные Cp для проверки энергетического баланса.
@@ -317,6 +324,11 @@ EnthalpyModel::EnthalpyModel(
     : materials_(materials),
     enthalpyData_(enthalpyData)
 {
+    if (materials_.size() != enthalpyData_.size()) {
+        throw std::runtime_error(
+            "EnthalpyModel error: materials size differs from enthalpy data size"
+            );
+    }
 }
 
 const ComponentEnthalpyDataList& EnthalpyModel::data() const
@@ -328,9 +340,10 @@ ComponentEnthalpyData EnthalpyModel::componentData(
     std::size_t componentIndexValue
     ) const
 {
-    if (componentIndexValue >= ComponentCount)
-    {
-        throw std::out_of_range("Invalid component index in enthalpy data");
+    if (componentIndexValue >= enthalpyData_.size()) {
+        throw std::out_of_range(
+            "Invalid component index in enthalpy data"
+            );
     }
 
     return enthalpyData_[componentIndexValue];
@@ -356,24 +369,25 @@ double EnthalpyModel::componentMolarEnthalpyJPerKmol(
     const ComponentEnthalpyData& component =
         componentData(componentIndex);
 
-    const double T =
-        temperatureK;
+    const double T = temperatureK;
+    const double Tref = component.referenceTemperatureK;
 
-    const double Tref =
-        component.referenceTemperatureK;
+    const double T2 = T * T;
+    const double T3 = T2 * T;
+    const double T4 = T2 * T2;
+    const double T5 = T4 * T;
+
+    const double Tref2 = Tref * Tref;
+    const double Tref3 = Tref2 * Tref;
+    const double Tref4 = Tref2 * Tref2;
+    const double Tref5 = Tref4 * Tref;
 
     const double deltaH =
         component.cpA * (T - Tref)
-        + 0.5 * component.cpB * (T * T - Tref * Tref)
-        + (1.0 / 3.0) * component.cpC * (T * T * T - Tref * Tref * Tref)
-        + 0.25 * component.cpD * (
-              T * T * T * T
-              - Tref * Tref * Tref * Tref
-              )
-        - component.cpE * (
-              1.0 / T
-              - 1.0 / Tref
-              );
+        + 0.5 * component.cpB * (T2 - Tref2)
+        + (1.0 / 3.0) * component.cpC * (T3 - Tref3)
+        + 0.25 * component.cpD * (T4 - Tref4)
+        + 0.2 * component.cpE * (T5 - Tref5);
 
     return
         component.referenceMolarEnthalpyJPerKmol
@@ -386,16 +400,18 @@ Composition EnthalpyModel::componentMolarEnthalpiesJPerKmol(
 {
     validateTemperature(temperatureK);
 
-    Composition result{};
+    Composition result =
+        makeComposition(materials_.size());
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
-    {
+    for (std::size_t i = 0; i < materials_.size(); ++i) {
         result[i] =
             componentMolarEnthalpyJPerKmol(
                 i,
                 temperatureK
                 );
     }
+
+    return result;
 
     return result;
 }
@@ -405,12 +421,18 @@ double EnthalpyModel::mixtureMolarEnthalpyJPerKmol(
     const Composition& composition
     ) const
 {
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "EnthalpyModel::mixtureMolarEnthalpyJPerKmol composition"
+        );
+
     validateTemperature(temperatureK);
 
     double compositionSum = 0.0;
     double enthalpySum = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         if (composition[i] < 0.0)
         {

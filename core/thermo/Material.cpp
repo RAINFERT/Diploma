@@ -1,72 +1,107 @@
 #include "Material.h"
 
 #include <cmath>
+#include <stdexcept>
 
 MaterialList createDefaultMaterials()
 {
-    return {
+    MaterialList materials(ComponentCount);
+
+    materials[componentIndex(Component::C2H6)] =
         Material{
-            Component::C2H6,
             "C2H6",
-            32.27800903 + 273.15,     // Tc, K
-            4.883850098e6,            // Pc, Pa
-            9.86e-2,                  // omega
-            30.06990051,              // kg/kmol
+
+            // component_name = Ethane
+            305.32,       // Tc, K
+            4872000.0,    // Pc, Pa
+            0.1455,       // Vc, m3/kmol
+            0.279,        // Zc
+            0.099,        // omega
+            30.06904,     // MW, kg/kmol
+
             AntoineCoefficients{
-                44.0103,
-                -2568.82,
+                61.43744,
+                -2814.319,
                 0.0,
-                -4.97635,
-                1.46e-5,
+                -6.778053,
+                2.10827e-05,
                 2.0
             }
-        },
+        };
+
+    materials[componentIndex(Component::C5H12)] =
         Material{
-            Component::C5H12,
             "C5H12",
-            196.4500061 + 273.15,     // Tc, K
-            3.375120117e6,            // Pc, Pa
-            0.253890008,              // omega
-            72.15100098,              // kg/kmol
+
+            // component_name = N-pentane
+            469.7,
+            3370000.0,
+            0.311,
+            0.268,
+            0.251,
+            72.14878,
+
             AntoineCoefficients{
-                63.3315,
-                -5117.78,
+                72.14242,
+                -5265.589,
                 0.0,
-                -7.48305,
-                7.77e-6,
+                -7.720709,
+                7.151866e-06,
                 2.0
             }
-        },
+        };
+
+    materials[componentIndex(Component::H2O)] =
         Material{
-            Component::H2O,
             "H2O",
-            374.1490112 + 273.15,     // Tc, K
-            22.12e6,                  // Pc, Pa
-            0.344000012,              // omega
-            18.01510048,              // kg/kmol
+
+            // component_name = Water
+            647.14,
+            22064000.0,
+            0.05595,
+            0.229,
+            0.344,
+            18.01528,
+
             AntoineCoefficients{
-                65.9278,
-                -7227.53,
+                74.55502,
+                -7295.586,
                 0.0,
-                -7.17695,
-                4.03e-6,
+                -7.442448,
+                4.2881e-06,
                 2.0
             }
-        }
-    };
+        };
+
+    return materials;
 }
 
-double vaporPressurePa(const Material& material, double temperatureK)
+double vaporPressurePa(
+    const Material& material,
+    double temperatureK
+    )
 {
+    if (temperatureK <= 0.0)
+    {
+        throw std::invalid_argument("Temperature must be positive");
+    }
+
     const AntoineCoefficients& c = material.antoine;
 
-    const double lnPressureKPa =
+    // Для текущих коэффициентов из ChemSep:
+    //
+    // ln(P[Pa]) = A + B / T + C * ln(T) + D * T^E
+    //
+    // В структуре:
+    // c.C = 0.0
+    // c.D = коэффициент перед ln(T)
+    // c.E = коэффициент перед T^F
+    // c.F = степень T
+    const double lnPressurePa =
         c.A
         + c.B / (c.C + temperatureK)
         + c.D * std::log(temperatureK)
         + c.E * std::pow(temperatureK, c.F);
 
-    const double pressureKPa = std::exp(lnPressureKPa);
-
-    return pressureKPa * 1000.0;
+    return std::exp(lnPressurePa);
 }

@@ -459,6 +459,27 @@ MassBalanceResult WellStirredReactorModel::computeMassBalance(
 {
     MassBalanceResult result;
 
+    const std::size_t n =
+        thermo_.materials().size();
+
+    result.inletComposition =
+        makeComposition(n);
+
+    result.outletComposition =
+        makeComposition(n);
+
+    result.inletMassFlowKgPerS =
+        makeComposition(n);
+
+    result.outletMassFlowKgPerS =
+        makeComposition(n);
+
+    result.reactionMassRateKgPerS =
+        makeComposition(n);
+
+    result.massDerivativesKgPerS =
+        makeComposition(n);
+
     result.evaluation = evaluate(state);
 
     const MaterialList& materials =
@@ -532,7 +553,7 @@ MassBalanceResult WellStirredReactorModel::computeMassBalance(
     result.totalReactionMassRateKgPerS = 0.0;
     result.totalMassDerivativeKgPerS = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < n; ++i)
     {
         const double molecularWeight =
             materials[i].molarMassKgPerKmol;
@@ -676,7 +697,10 @@ std::string WellStirredReactorModel::evaluationToString(
     out << "    N = " << evaluation.totalMolesKmol << " kmol\n";
 
     out << "  Overall composition Z:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    const std::size_t n =
+        thermo_.materials().size();
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "    Z(" << materials[i].name << ") = "
             << evaluation.zOverall[i] << "\n";
@@ -695,14 +719,16 @@ std::string WellStirredReactorModel::evaluationToString(
     out << "  Phase compositions:\n";
 
     out << "    Liquid x:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "      x(" << materials[i].name << ") = "
             << evaluation.flash.xLiquid[i] << "\n";
     }
 
     out << "    Vapor y:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "      y(" << materials[i].name << ") = "
             << evaluation.flash.yVapor[i] << "\n";
@@ -803,14 +829,18 @@ std::string WellStirredReactorModel::massBalanceToString(
         << "\n";
 
     out << "  Inlet composition:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    const std::size_t n =
+        thermo_.materials().size();
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "    Zin(" << materials[i].name << ") = "
             << result.inletComposition[i] << "\n";
     }
 
     out << "  Outlet composition:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "    Zout(" << materials[i].name << ") = "
             << result.outletComposition[i] << "\n";
@@ -825,7 +855,8 @@ std::string WellStirredReactorModel::massBalanceToString(
         << " kmol/(m3_liq*s)\n";
 
     out << "  Component source terms from reaction:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "    R(" << materials[i].name << ") = "
             << result.reactionRates.componentRatesKmolPerM3S[i]
@@ -833,7 +864,8 @@ std::string WellStirredReactorModel::massBalanceToString(
     }
 
     out << "  Mass flow contributions:\n";
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+
+    for (std::size_t i = 0; i < n; ++i)
     {
         out << "    " << materials[i].name << ":\n";
         out << "      inlet    = "

@@ -20,7 +20,7 @@ struct WellStirredReactorParameters
     double inletTemperatureC = 25.0;
 
     // Входной состав
-    Composition inletComposition{0.5, 0.5, 0.0};
+    Composition inletComposition = makeLegacyComposition(0.5, 0.5, 0.0);
 
     // Регулятор выходного потока:
     // raw Outlet.F = outletValveCoefficient * (P - outletReferencePressure)
@@ -50,7 +50,7 @@ struct WellStirredReactorEvaluation
     double totalMolesKmol = 0.0;
 
     // Общий состав смеси
-    Composition zOverall{};
+    Composition zOverall = makeComposition();
 
     // Результат flash-расчета
     FlashResult flash;
@@ -91,8 +91,8 @@ struct MassBalanceResult
     double outletFlowKmolPerS = 0.0;
     double rawOutletFlowKmolPerS = 0.0;
 
-    Composition inletComposition{};
-    Composition outletComposition{};
+    Composition inletComposition = makeComposition();
+    Composition outletComposition = makeComposition();
 
     // Объемная доля жидкой фазы внутри реактора
     double liquidVolumeFraction = 0.0;
@@ -101,12 +101,10 @@ struct MassBalanceResult
     ReactionRates reactionRates;
 
     // Отдельные вклады в dM/dt, kg/s
-    std::array<double, ComponentCount> inletMassFlowKgPerS{};
-    std::array<double, ComponentCount> outletMassFlowKgPerS{};
-    std::array<double, ComponentCount> reactionMassRateKgPerS{};
-
-    // Итоговые производные масс компонентов, kg/s
-    std::array<double, ComponentCount> massDerivativesKgPerS{};
+    Composition inletMassFlowKgPerS = makeComposition();
+    Composition outletMassFlowKgPerS = makeComposition();
+    Composition reactionMassRateKgPerS = makeComposition();
+    Composition massDerivativesKgPerS = makeComposition();
 
     double totalInletMassFlowKgPerS = 0.0;
     double totalOutletMassFlowKgPerS = 0.0;

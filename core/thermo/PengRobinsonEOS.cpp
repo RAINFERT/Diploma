@@ -105,16 +105,16 @@ std::vector<double> positiveUniqueRoots(const std::vector<double>& roots)
 
 PengRobinsonEOS::PengRobinsonEOS(const MaterialList& materials)
     : materials_(materials),
-    bi_{},
-    mi_{},
-    kij_{}
+    bi_(materials.size(), 0.0),
+    mi_(materials.size(), 0.0),
+    kij_(materials.size(), std::vector<double>(materials.size(), 0.0))
 {
     computePureParameters();
 }
 
 void PengRobinsonEOS::computePureParameters()
 {
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         const Material& material = materials_[i];
 
@@ -162,22 +162,34 @@ double PengRobinsonEOS::computeAlpha(
     return value * value;
 }
 
-std::array<double, ComponentCount> PengRobinsonEOS::computeAi(
-    double temperatureK
+std::vector<double> PengRobinsonEOS::computeAi(
+    const double temperatureK
     ) const
 {
-    std::array<double, ComponentCount> ai{};
+    std::vector<double> ai(
+        materials_.size(),
+        0.0
+        );
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
-    {
-        const Material& material = materials_[i];
+    for (std::size_t i = 0; i < materials_.size(); ++i) {
+        const Material& material =
+            materials_[i];
 
-        const double alpha = computeAlpha(i, temperatureK);
+        const double Tr =
+            temperatureK / material.criticalTemperatureK;
+
+        const double sqrtTr =
+            std::sqrt(Tr);
+
+        const double alpha =
+            std::pow(
+                1.0 + mi_[i] * (1.0 - sqrtTr),
+                2.0
+                );
 
         ai[i] =
             0.45724
-            * R
-            * R
+            * R * R
             * material.criticalTemperatureK
             * material.criticalTemperatureK
             / material.criticalPressurePa
@@ -192,19 +204,26 @@ MixtureParameters PengRobinsonEOS::computeMixtureParameters(
     double temperatureK
     ) const
 {
-    const std::array<double, ComponentCount> ai = computeAi(temperatureK);
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "PengRobinsonEOS::functionName"
+        );
+
+    const std::vector<double> ai =
+        computeAi(temperatureK);
 
     double aMix = 0.0;
     double bMix = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         bMix += composition[i] * bi_[i];
     }
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
-        for (std::size_t j = 0; j < ComponentCount; ++j)
+        for (std::size_t j = 0; j < materials_.size(); ++j)
         {
             aMix +=
                 composition[i]
@@ -223,6 +242,12 @@ ZFactors PengRobinsonEOS::computeZFactors(
     const Composition& composition
     ) const
 {
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "PengRobinsonEOS::functionName"
+        );
+
     if (pressurePa <= 0.0)
     {
         throw std::invalid_argument("Pressure must be positive");
@@ -296,13 +321,19 @@ ZFactors PengRobinsonEOS::computeZFactors(
     };
 }
 
-Composition PengRobinsonEOS::computeFugacityCoefficients(
+Composition PengRobinsonEOS::computeLogFugacityCoefficients(
     double pressurePa,
     double temperatureK,
     const Composition& composition,
     double zFactor
     ) const
 {
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "PengRobinsonEOS::functionName"
+        );
+
     if (pressurePa <= 0.0)
     {
         throw std::invalid_argument("Pressure must be positive");
@@ -316,27 +347,18 @@ Composition PengRobinsonEOS::computeFugacityCoefficients(
     const MixtureParameters params =
         computeMixtureParameters(composition, temperatureK);
 
-    const std::array<double, ComponentCount> ai =
+    const std::vector<double> ai =
         computeAi(temperatureK);
 
     const double A =
-        params.a
-        * pressurePa
-        / (R * R * temperatureK * temperatureK);
+        params.a * pressurePa / (R * R * temperatureK * temperatureK);
 
     const double B =
-        params.b
-        * pressurePa
-        / (R * temperatureK);
+        params.b * pressurePa / (R * temperatureK);
 
-    if (params.a <= 0.0)
+    if (params.a <= 0.0 || params.b <= 0.0)
     {
-        throw std::runtime_error("Invalid Peng-Robinson mixture parameter a");
-    }
-
-    if (params.b <= 0.0)
-    {
-        throw std::runtime_error("Invalid Peng-Robinson mixture parameter b");
+        throw std::runtime_error("Invalid Peng-Robinson mixture parameters");
     }
 
     if (zFactor <= B)
@@ -344,21 +366,28 @@ Composition PengRobinsonEOS::computeFugacityCoefficients(
         throw std::runtime_error("Invalid Z factor: Z must be greater than B");
     }
 
-    Composition phi{};
-
     const double sqrt2 = std::sqrt(2.0);
 
-    const double logTerm =
-        std::log(
-            (zFactor + (1.0 + sqrt2) * B)
-            / (zFactor + (1.0 - sqrt2) * B)
-            );
+    const double logArgument =
+        (zFactor + (1.0 + sqrt2) * B)
+        /
+        (zFactor + (1.0 - sqrt2) * B);
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    if (logArgument <= 0.0)
+    {
+        throw std::runtime_error("Invalid logarithm argument in ln(phi)");
+    }
+
+    const double logTerm = std::log(logArgument);
+
+    Composition lnPhi =
+        makeComposition(materials_.size());
+
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         double daDni = 0.0;
 
-        for (std::size_t j = 0; j < ComponentCount; ++j)
+        for (std::size_t j = 0; j < materials_.size(); ++j)
         {
             daDni +=
                 composition[j]
@@ -369,18 +398,119 @@ Composition PengRobinsonEOS::computeFugacityCoefficients(
         daDni *= 2.0;
 
         const double Bi =
-            bi_[i]
-            * pressurePa
-            / (R * temperatureK);
+            bi_[i] * pressurePa / (R * temperatureK);
 
-        const double lnPhi =
+        lnPhi[i] =
             Bi / B * (zFactor - 1.0)
             - std::log(zFactor - B)
             - A / (2.0 * sqrt2 * B)
                   * (daDni / params.a - Bi / B)
                   * logTerm;
+    }
 
-        phi[i] = std::exp(lnPhi);
+    return lnPhi;
+}
+
+
+double PengRobinsonEOS::pressureFromMolarVolume(
+    double temperatureK,
+    double molarVolumeM3PerMol,
+    const Composition& composition
+    ) const
+{
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "PengRobinsonEOS::functionName"
+        );
+
+    if (temperatureK <= 0.0)
+    {
+        throw std::invalid_argument("Temperature must be positive");
+    }
+
+    if (molarVolumeM3PerMol <= 0.0)
+    {
+        throw std::invalid_argument("Molar volume must be positive");
+    }
+
+    const MixtureParameters params =
+        computeMixtureParameters(composition, temperatureK);
+
+    const double V = molarVolumeM3PerMol;
+    const double a = params.a;
+    const double b = params.b;
+
+    if (V <= b)
+    {
+        throw std::runtime_error("Invalid PR volume: V <= b");
+    }
+
+    const double denominator =
+        V * V + 2.0 * b * V - b * b;
+
+    if (std::abs(denominator) < 1.0e-30)
+    {
+        throw std::runtime_error("Invalid PR attraction denominator");
+    }
+
+    return R * temperatureK / (V - b) - a / denominator;
+}
+
+
+double PengRobinsonEOS::pseudoCriticalMolarVolumeM3PerMol(
+    const Composition& composition
+    ) const
+{
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "PengRobinsonEOS::functionName"
+        );
+
+    double vcMixM3PerKmol = 0.0;
+
+    for (std::size_t i = 0; i < materials_.size(); ++i)
+    {
+        vcMixM3PerKmol +=
+            composition[i] * materials_[i].criticalVolumeM3PerKmol;
+    }
+
+    if (vcMixM3PerKmol <= 0.0)
+    {
+        throw std::runtime_error("Invalid pseudo-critical molar volume");
+    }
+
+    return vcMixM3PerKmol / 1000.0;
+}
+
+Composition PengRobinsonEOS::computeFugacityCoefficients(
+    double pressurePa,
+    double temperatureK,
+    const Composition& composition,
+    double zFactor
+    ) const
+{
+    requireCompositionSize(
+        composition,
+        materials_.size(),
+        "PengRobinsonEOS::functionName"
+        );
+
+    const Composition lnPhi =
+        computeLogFugacityCoefficients(
+            pressurePa,
+            temperatureK,
+            composition,
+            zFactor
+            );
+
+    Composition phi =
+        makeComposition(materials_.size());
+
+    for (std::size_t i = 0; i < materials_.size(); ++i)
+    {
+        phi[i] = std::exp(lnPhi[i]);
     }
 
     return phi;

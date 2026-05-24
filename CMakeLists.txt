@@ -40,6 +40,18 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         core/simulation/EnergyReactorSimulation.h core/simulation/EnergyReactorSimulation.cpp
         README
         .gitignore
+        core/thermo/GibbsFlashCalculation.h core/thermo/GibbsFlashCalculation.cpp
+        input/case_default.json
+        core/config/SimulationConfig.h
+        core/config/SimulationConfigLoader.h core/config/SimulationConfigLoader.cpp
+        core/config/SimulationConfigValidator.h core/config/SimulationConfigValidator.cpp
+        core/properties/ChemsepComponent.h core/properties/ChemsepComponent.cpp
+        core/properties/ComponentDatabase.h core/properties/ComponentDatabase.cpp
+        core/properties/ComponentDatabaseLoader.h core/properties/ComponentDatabaseLoader.cpp
+        core/properties/ChemsepMaterialBuilder.h core/properties/ChemsepMaterialBuilder.cpp
+        core/properties/ChemsepEnthalpyBuilder.h core/properties/ChemsepEnthalpyBuilder.cpp
+        core/properties/ComponentSet.h core/properties/ComponentSet.cpp
+        core/properties/ComponentSetBuilder.h core/properties/ComponentSetBuilder.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET WellStirredReactor APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

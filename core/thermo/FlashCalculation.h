@@ -15,29 +15,113 @@ enum class FlashStatus
 
 std::string flashStatusToString(FlashStatus status);
 
+enum class FlashMethod
+{
+    Unknown,
+    RachfordRice,
+    GibbsRadau,
+    HybridSinglePhasePrecheck,
+    HybridFallbackRachfordRice,
+    HybridBoundaryRachfordRice,
+    HybridFullRachfordRicePrecheck
+};
+
+inline const char* flashMethodToString(FlashMethod method)
+{
+    switch (method)
+    {
+    case FlashMethod::RachfordRice:
+        return "Rachford-Rice K-values";
+
+    case FlashMethod::GibbsRadau:
+        return "Gibbs-Radau Gibbs minimization";
+
+    case FlashMethod::HybridSinglePhasePrecheck:
+        return "Hybrid: fast single-phase precheck";
+
+    case FlashMethod::HybridFallbackRachfordRice:
+        return "Hybrid: fallback Rachford-Rice";
+
+    case FlashMethod::HybridBoundaryRachfordRice:
+        return "Hybrid: boundary Rachford-Rice";
+
+    case FlashMethod::HybridFullRachfordRicePrecheck:
+        return "Hybrid: full Rachford-Rice precheck";
+
+    case FlashMethod::Unknown:
+    default:
+        return "Unknown";
+    }
+}
+
+struct FlashDiagnostics
+{
+    int pseudoSteps = 0;
+
+    int acceptedRadauSteps = 0;
+    int rejectedRadauSteps = 0;
+
+    int totalRadauNewtonIterations = 0;
+    int lastRadauNewtonIterations = 0;
+
+    int rhsEvaluations = 0;
+
+    double lastRadauResidualNorm = 0.0;
+    double lastRadauStepNorm = 0.0;
+
+    double gibbsTwoPhase = 0.0;
+    double gibbsSingleLiquid = 0.0;
+    double gibbsSingleVapor = 0.0;
+
+    double maxFugacityResidual = 0.0;
+    double maxPressureResidual = 0.0;
+
+    double finalPseudoTimeStep = 0.0;
+
+    double betaLiquidCandidate = 0.0;
+    double betaVaporCandidate = 0.0;
+
+    double initialBetaVapor = 0.0;
+    double initialGibbsTwoPhase = 0.0;
+    double initialMaxFugacityResidual = 0.0;
+    double initialMaxPressureResidual = 0.0;
+
+    double precheckBetaVapor = -1.0;
+    double precheckF0 = 0.0;
+    double precheckF1 = 0.0;
+
+    int precheckStatus = 0;
+    int precheckIterations = 0;
+
+    std::string lastRadauFailureMessage;
+};
+
+
 struct FlashResult
 {
     FlashStatus status = FlashStatus::NotConverged;
 
+    FlashMethod method = FlashMethod::Unknown;
+
     int iterations = 0;
+
+    FlashDiagnostics diagnostics{};
 
     // Мольная доля паровой фазы
     double beta = 0.0;
 
     // Составы фаз
-    Composition xLiquid{};
-    Composition yVapor{};
+    Composition xLiquid = makeComposition();
+    Composition yVapor = makeComposition();
 
-    // K_i = y_i / x_i
-    Composition kValues{};
+    Composition kValues = makeComposition();
+
+    Composition phiLiquid = makeComposition();
+    Composition phiVapor = makeComposition();
 
     // Z-факторы фаз
     double zLiquid = 0.0;
     double zVapor = 0.0;
-
-    // Коэффициенты летучести
-    Composition phiLiquid{};
-    Composition phiVapor{};
 
     // Средние молярные массы фаз, kg/kmol
     double molarMassLiquidKgPerKmol = 0.0;
