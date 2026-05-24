@@ -102,6 +102,50 @@ FlashResult ThermoPackage::flash(
 
     */
 
+    static int totalFlashCalls = 0;
+    static int rrBoundaryCalls = 0;
+    static int rrFullPrecheckCalls = 0;
+    static int gibbsRadauCalls = 0;
+    static int singlePrecheckCalls = 0;
+    static int otherCalls = 0;
+
+    ++totalFlashCalls;
+
+    switch (result.method)
+    {
+    case FlashMethod::HybridBoundaryRachfordRice:
+        ++rrBoundaryCalls;
+        break;
+
+    case FlashMethod::HybridFullRachfordRicePrecheck:
+        ++rrFullPrecheckCalls;
+        break;
+
+    case FlashMethod::GibbsRadau:
+        ++gibbsRadauCalls;
+        break;
+
+    case FlashMethod::HybridSinglePhasePrecheck:
+        ++singlePrecheckCalls;
+        break;
+
+    default:
+        ++otherCalls;
+        break;
+    }
+
+    if (totalFlashCalls % 1000 == 0)
+    {
+        std::cout
+            << "[flash stats] total=" << totalFlashCalls
+            << ", boundaryRR=" << rrBoundaryCalls
+            << ", fullRRprecheck=" << rrFullPrecheckCalls
+            << ", GibbsRadau=" << gibbsRadauCalls
+            << ", singlePrecheck=" << singlePrecheckCalls
+            << ", other=" << otherCalls
+            << "\n";
+    }
+
     if (result.status == FlashStatus::NotConverged)
     {
         std::cerr

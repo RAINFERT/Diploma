@@ -14,7 +14,7 @@ public:
     GibbsFlashCalculation(
         const MaterialList& materials,
         const PengRobinsonEOS& eos
-    );
+        );
 
     FlashResult calculate(
         double pressurePa,
@@ -22,7 +22,7 @@ public:
         const Composition& zOverall,
         double tolerance = 1.0e-8,
         int maxIterations = 300
-    ) const;
+        ) const;
 
 private:
     static constexpr double R = 8.314462618;
@@ -86,55 +86,47 @@ private:
 
     Composition normalizeComposition(
         const Composition& composition
-    ) const;
+        ) const;
 
     bool isActive(
         double zi
-    ) const;
+        ) const;
 
     Composition wilsonKValues(
         double pressurePa,
         double temperatureK
-    ) const;
+        ) const;
 
     double rachfordRiceValue(
         double beta,
         const Composition& z,
         const Composition& k
-    ) const;
+        ) const;
 
     double initialBetaEstimate(
         const Composition& z,
         const Composition& k
-    ) const;
-
-    GibbsState initialStateFromBeta(
-        double pressurePa,
-        double temperatureK,
-        const Composition& z,
-        const Composition& k,
-        double betaVapor
-    ) const;
+        ) const;
 
     GibbsState initialState(
         double pressurePa,
         double temperatureK,
         const Composition& z
-    ) const;
+        ) const;
 
     GibbsEvaluation evaluate(
         const GibbsState& state,
         double pressurePa,
         double temperatureK,
         const Composition& z
-    ) const;
+        ) const;
 
     std::vector<double> rhs(
         const GibbsState& state,
         double pressurePa,
         double temperatureK,
         const Composition& z
-    ) const;
+        ) const;
 
     RadauStepResult radauIIA3Step(
         const GibbsState& state,
@@ -142,7 +134,7 @@ private:
         double pressurePa,
         double temperatureK,
         const Composition& z
-    ) const;
+        ) const;
 
     FlashResult fullRachfordRicePrecheck(
         double pressurePa,
@@ -150,46 +142,46 @@ private:
         const Composition& z,
         double tolerance,
         int maxIterations
-    ) const;
+        ) const;
 
     double singlePhaseGibbsDimensionless(
         double pressurePa,
         double temperatureK,
         const Composition& z,
         bool vaporPhase
-    ) const;
+        ) const;
 
     FlashStatus bestSinglePhase(
         double pressurePa,
         double temperatureK,
         const Composition& z,
         double& bestGibbs
-    ) const;
+        ) const;
 
     bool isConverged(
         const GibbsEvaluation& evaluation,
         double tolerance
-    ) const;
+        ) const;
 
     FlashResult makeTwoPhaseResult(
         const GibbsEvaluation& evaluation,
         int iterations
-    ) const;
+        ) const;
 
     FlashResult makeSinglePhaseResult(
         FlashStatus status,
         double pressurePa,
         double temperatureK,
         const Composition& z
-    ) const;
+        ) const;
 
     void fillDensities(
         FlashResult& result,
         double pressurePa,
         double temperatureK
-    ) const;
+        ) const;
 
     double averageMolarMassKgPerKmol(
         const Composition& composition
-    ) const;
+        ) const;
 };

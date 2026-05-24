@@ -1,15 +1,11 @@
 #include "GibbsFlashCalculation.h"
 
-#include "FlashCalculation.h"
 #include "../numerics/NewtonSolver.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
-#include <string>
-#include <vector>
 
 
 namespace
@@ -18,50 +14,35 @@ constexpr double Tiny = 1.0e-30;
 constexpr double ActiveTolerance = 1.0e-14;
 constexpr double PhaseFractionMin = 1.0e-10;
 constexpr double MoleFloorRelative = 1.0e-12;
-constexpr double MinPseudoDriftScale = 1.0e-8;
+
+constexpr double BoundaryBetaMin = 0.02;
+constexpr double BoundaryBetaMax = 0.98;
 
 constexpr double BarrierOmega = 1.0e5;
-constexpr double BarrierWidthFactor = 0.1;
+constexpr double BarrierDelta = 1.0e-6;
 constexpr double Pi = 3.14159265358979323846;
-
-constexpr double BoundaryBetaMin = 0.01;
-constexpr double BoundaryBetaMax = 0.99;
 
 double safeLog(double value)
 {
     return std::log(std::max(value, Tiny));
 }
 
-double phaseMoleFloor(double zi)
+double smoothHeaviside(double x)
 {
-    return std::max(
-        Tiny,
-        MoleFloorRelative * std::max(zi, Tiny)
-    );
+    return 0.5 * (1.0 + std::erf(x / BarrierDelta));
 }
 
-double barrierWidth(double zi)
+double smoothDelta(double x)
 {
-    return std::max(
-        1.0e-18,
-        BarrierWidthFactor * phaseMoleFloor(zi)
-    );
-}
-
-double smoothHeaviside(double x, double zi)
-{
-    const double width = barrierWidth(zi);
-
-    return 0.5 * (1.0 + std::erf(x / width));
-}
-
-double smoothDelta(double x, double zi)
-{
-    const double width = barrierWidth(zi);
-    const double q = x / width;
+    const double q = x / BarrierDelta;
 
     return std::exp(-0.5 * q * q)
-        / (std::sqrt(2.0 * Pi) * width);
+           / (std::sqrt(2.0 * Pi) * BarrierDelta);
+}
+
+double phaseMoleFloor(double zi)
+{
+    return std::max(Tiny, MoleFloorRelative * std::max(zi, Tiny));
 }
 
 double clampExpArgument(double value)
@@ -86,16 +67,16 @@ double sumComposition(const Composition& composition)
 GibbsFlashCalculation::GibbsFlashCalculation(
     const MaterialList& materials,
     const PengRobinsonEOS& eos
-)
+    )
     : materials_(materials),
-      eos_(eos)
+    eos_(eos)
 {
 }
 
 
 bool GibbsFlashCalculation::isActive(
     double zi
-) const
+    ) const
 {
     return zi > ActiveTolerance;
 }
@@ -103,7 +84,7 @@ bool GibbsFlashCalculation::isActive(
 
 Composition GibbsFlashCalculation::normalizeComposition(
     const Composition& composition
-) const
+    ) const
 {
     const double sum = sumComposition(composition);
 
@@ -131,7 +112,7 @@ Composition GibbsFlashCalculation::normalizeComposition(
 Composition GibbsFlashCalculation::wilsonKValues(
     double pressurePa,
     double temperatureK
-) const
+    ) const
 {
     Composition k{};
 
@@ -146,7 +127,7 @@ Composition GibbsFlashCalculation::wilsonKValues(
                 5.373
                 * (1.0 + material.acentricFactor)
                 * (1.0 - material.criticalTemperatureK / temperatureK)
-            );
+                );
 
         k[i] = std::clamp(k[i], 1.0e-12, 1.0e12);
     }
@@ -159,7 +140,7 @@ double GibbsFlashCalculation::rachfordRiceValue(
     double beta,
     const Composition& z,
     const Composition& k
-) const
+    ) const
 {
     double value = 0.0;
 
@@ -173,13 +154,6 @@ double GibbsFlashCalculation::rachfordRiceValue(
         const double denominator =
             1.0 + beta * (k[i] - 1.0);
 
-        if (std::abs(denominator) < Tiny)
-        {
-            throw std::runtime_error(
-                "Invalid denominator in Rachford-Rice evaluation"
-            );
-        }
-
         value += z[i] * (k[i] - 1.0) / denominator;
     }
 
@@ -190,7 +164,7 @@ double GibbsFlashCalculation::rachfordRiceValue(
 double GibbsFlashCalculation::initialBetaEstimate(
     const Composition& z,
     const Composition& k
-) const
+    ) const
 {
     const double f0 = rachfordRiceValue(0.0, z, k);
     const double f1 = rachfordRiceValue(1.0, z, k);
@@ -213,11 +187,6 @@ double GibbsFlashCalculation::initialBetaEstimate(
         const double mid = 0.5 * (left + right);
         const double fmid = rachfordRiceValue(mid, z, k);
 
-        if (std::abs(fmid) < 1.0e-12)
-        {
-            return std::clamp(mid, 1.0e-10, 1.0 - 1.0e-10);
-        }
-
         if (fmid > 0.0)
         {
             left = mid;
@@ -228,20 +197,21 @@ double GibbsFlashCalculation::initialBetaEstimate(
         }
     }
 
-    return std::clamp(0.5 * (left + right), 1.0e-10, 1.0 - 1.0e-10);
+    return std::clamp(0.5 * (left + right), 1.0e-4, 1.0 - 1.0e-4);
 }
 
 
-GibbsFlashCalculation::GibbsState GibbsFlashCalculation::initialStateFromBeta(
+GibbsFlashCalculation::GibbsState GibbsFlashCalculation::initialState(
     double pressurePa,
     double temperatureK,
-    const Composition& z,
-    const Composition& k,
-    double betaVapor
-) const
+    const Composition& z
+    ) const
 {
+    const Composition k =
+        wilsonKValues(pressurePa, temperatureK);
+
     const double betaV =
-        std::clamp(betaVapor, 1.0e-10, 1.0 - 1.0e-10);
+        initialBetaEstimate(z, k);
 
     Composition x{};
     Composition y{};
@@ -261,23 +231,11 @@ GibbsFlashCalculation::GibbsState GibbsFlashCalculation::initialStateFromBeta(
         const double denominator =
             1.0 + betaV * (k[i] - 1.0);
 
-        if (denominator <= 0.0)
-        {
-            throw std::runtime_error(
-                "Invalid denominator in Gibbs initial state"
-            );
-        }
-
         x[i] = z[i] / denominator;
         y[i] = k[i] * x[i];
 
         sumX += x[i];
         sumY += y[i];
-    }
-
-    if (sumX <= 0.0 || sumY <= 0.0)
-    {
-        throw std::runtime_error("Invalid initial phase compositions");
     }
 
     for (std::size_t i = 0; i < ComponentCount; ++i)
@@ -287,43 +245,37 @@ GibbsFlashCalculation::GibbsState GibbsFlashCalculation::initialStateFromBeta(
             continue;
         }
 
-        x[i] /= sumX;
-        y[i] /= sumY;
+        x[i] /= std::max(sumX, Tiny);
+        y[i] /= std::max(sumY, Tiny);
     }
 
-    double vLiquid = 0.02 * R * temperatureK / pressurePa;
+    double vLiquid = R * temperatureK / pressurePa * 0.02;
     double vVapor = R * temperatureK / pressurePa;
 
     try
     {
-        const ZFactors zLiquidRoots =
+        const ZFactors zL =
             eos_.computeZFactors(pressurePa, temperatureK, x);
 
-        const ZFactors zVaporRoots =
+        const ZFactors zV =
             eos_.computeZFactors(pressurePa, temperatureK, y);
 
-        vLiquid =
-            zLiquidRoots.liquid * R * temperatureK / pressurePa;
-
-        vVapor =
-            zVaporRoots.vapor * R * temperatureK / pressurePa;
+        vLiquid = zL.liquid * R * temperatureK / pressurePa;
+        vVapor = zV.vapor * R * temperatureK / pressurePa;
     }
     catch (...)
     {
         // Оставляем безопасную оценку выше.
     }
 
-    const double idealGasVolume =
-        R * temperatureK / pressurePa;
-
     if (vLiquid <= 0.0 || !std::isfinite(vLiquid))
     {
-        vLiquid = 0.02 * idealGasVolume;
+        vLiquid = R * temperatureK / pressurePa * 0.02;
     }
 
     if (vVapor <= vLiquid || !std::isfinite(vVapor))
     {
-        vVapor = idealGasVolume;
+        vVapor = R * temperatureK / pressurePa;
     }
 
     GibbsState state;
@@ -346,105 +298,12 @@ GibbsFlashCalculation::GibbsState GibbsFlashCalculation::initialStateFromBeta(
         const double floor = phaseMoleFloor(z[i]);
         const double upper = std::max(z[i] - floor, floor);
 
-        nLiquid =
-            std::clamp(nLiquid, floor, upper);
+        nLiquid = std::clamp(nLiquid, floor, upper);
 
-        state.y[2 + i] =
-            std::log(nLiquid);
+        state.y[2 + i] = std::log(nLiquid);
     }
 
     return state;
-}
-
-
-GibbsFlashCalculation::GibbsState GibbsFlashCalculation::initialState(
-    double pressurePa,
-    double temperatureK,
-    const Composition& z
-) const
-{
-    const Composition k =
-        wilsonKValues(pressurePa, temperatureK);
-
-    std::vector<double> betaCandidates;
-
-    betaCandidates.push_back(initialBetaEstimate(z, k));
-
-    // Multi-start нужен только для Gibbs-Radau в основной двухфазной области.
-    // Граничные beta (< 0.01 или > 0.99) теперь отсекаются полным RR-precheck.
-    betaCandidates.push_back(0.05);
-    betaCandidates.push_back(0.10);
-    betaCandidates.push_back(0.25);
-    betaCandidates.push_back(0.50);
-    betaCandidates.push_back(0.75);
-    betaCandidates.push_back(0.90);
-    betaCandidates.push_back(0.95);
-
-    bool found = false;
-    double bestScore =
-        std::numeric_limits<double>::infinity();
-
-    GibbsState bestState;
-
-    for (double beta : betaCandidates)
-    {
-        beta =
-            std::clamp(beta, 1.0e-10, 1.0 - 1.0e-10);
-
-        try
-        {
-            GibbsState candidate =
-                initialStateFromBeta(
-                    pressurePa,
-                    temperatureK,
-                    z,
-                    k,
-                    beta
-                );
-
-            const GibbsEvaluation e =
-                evaluate(
-                    candidate,
-                    pressurePa,
-                    temperatureK,
-                    z
-                );
-
-            if (!std::isfinite(e.gibbsDimensionless))
-            {
-                continue;
-            }
-
-            const double score =
-                e.gibbsDimensionless
-                + 1.0e-3 * e.maxFugacityResidual
-                + 1.0e-3 * e.maxPressureResidual;
-
-            if (score < bestScore)
-            {
-                bestScore = score;
-                bestState = candidate;
-                found = true;
-            }
-        }
-        catch (...)
-        {
-            // Неподходящий старт просто пропускаем.
-        }
-    }
-
-    if (!found)
-    {
-        return initialStateFromBeta(
-            pressurePa,
-            temperatureK,
-            z,
-            k,
-            0.5
-        );
-    }
-
-    return bestState;
 }
 
 
@@ -453,22 +312,12 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
     double pressurePa,
     double temperatureK,
     const Composition& z
-) const
+    ) const
 {
     GibbsEvaluation e;
 
-    if (state.y.size() != 2 + ComponentCount)
-    {
-        throw std::runtime_error("Invalid Gibbs state dimension");
-    }
-
     e.vLiquid = std::exp(state.y[0]);
     e.vVapor = std::exp(state.y[1]);
-
-    if (!std::isfinite(e.vLiquid) || !std::isfinite(e.vVapor))
-    {
-        throw std::runtime_error("Non-finite molar volume in Gibbs state");
-    }
 
     if (e.vLiquid <= 0.0 || e.vVapor <= 0.0)
     {
@@ -484,21 +333,16 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
             continue;
         }
 
-        const double nLiquid = std::exp(state.y[2 + i]);
+        const double nL = std::exp(state.y[2 + i]);
         const double floor = phaseMoleFloor(z[i]);
 
-        if (!std::isfinite(nLiquid))
-        {
-            throw std::runtime_error("Non-finite phase mole amount in Gibbs state");
-        }
-
-        if (nLiquid <= floor || nLiquid >= z[i] - floor)
+        if (nL <= floor || nL >= z[i] - floor)
         {
             throw std::runtime_error("Invalid phase mole amount in Gibbs state");
         }
 
-        e.nLiquid[i] = nLiquid;
-        e.nVapor[i] = z[i] - nLiquid;
+        e.nLiquid[i] = nL;
+        e.nVapor[i] = z[i] - nL;
 
         e.betaLiquid += e.nLiquid[i];
         e.betaVapor += e.nVapor[i];
@@ -522,11 +366,8 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
         e.yVapor[i] = e.nVapor[i] / e.betaVapor;
     }
 
-    e.zLiquid =
-        pressurePa * e.vLiquid / (R * temperatureK);
-
-    e.zVapor =
-        pressurePa * e.vVapor / (R * temperatureK);
+    e.zLiquid = pressurePa * e.vLiquid / (R * temperatureK);
+    e.zVapor = pressurePa * e.vVapor / (R * temperatureK);
 
     e.lnPhiLiquid =
         eos_.computeLogFugacityCoefficients(
@@ -534,7 +375,7 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
             temperatureK,
             e.xLiquid,
             e.zLiquid
-        );
+            );
 
     e.lnPhiVapor =
         eos_.computeLogFugacityCoefficients(
@@ -542,7 +383,7 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
             temperatureK,
             e.yVapor,
             e.zVapor
-        );
+            );
 
     for (std::size_t i = 0; i < ComponentCount; ++i)
     {
@@ -555,14 +396,14 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
             temperatureK,
             e.vLiquid,
             e.xLiquid
-        );
+            );
 
     e.pressureVaporPa =
         eos_.pressureFromMolarVolume(
             temperatureK,
             e.vVapor,
             e.yVapor
-        );
+            );
 
     double g = 0.0;
 
@@ -573,22 +414,27 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
             continue;
         }
 
-        g += e.nLiquid[i]
+        const double liquidTerm =
+            e.nLiquid[i]
             * (
                 safeLog(e.nLiquid[i])
                 + e.lnPhiLiquid[i]
                 - safeLog(e.betaLiquid)
-            );
+                );
 
-        g += e.nVapor[i]
+        const double vaporTerm =
+            e.nVapor[i]
             * (
                 safeLog(e.nVapor[i])
                 + e.lnPhiVapor[i]
                 - safeLog(e.betaVapor)
-            );
+                );
 
-        g += BarrierOmega
-            * smoothHeaviside(e.nLiquid[i] - z[i], z[i]);
+        const double barrier =
+            BarrierOmega
+            * smoothHeaviside(e.nLiquid[i] - z[i]);
+
+        g += liquidTerm + vaporTerm + barrier;
     }
 
     e.gibbsDimensionless = g;
@@ -613,12 +459,10 @@ GibbsFlashCalculation::GibbsEvaluation GibbsFlashCalculation::evaluate(
     }
 
     const double liquidPressureResidual =
-        std::abs(e.pressureLiquidPa - pressurePa)
-        / std::max(pressurePa, Tiny);
+        std::abs(e.pressureLiquidPa - pressurePa) / pressurePa;
 
     const double vaporPressureResidual =
-        std::abs(e.pressureVaporPa - pressurePa)
-        / std::max(pressurePa, Tiny);
+        std::abs(e.pressureVaporPa - pressurePa) / pressurePa;
 
     e.maxPressureResidual =
         std::max(liquidPressureResidual, vaporPressureResidual);
@@ -632,7 +476,7 @@ std::vector<double> GibbsFlashCalculation::rhs(
     double pressurePa,
     double temperatureK,
     const Composition& z
-) const
+    ) const
 {
     const GibbsEvaluation e =
         evaluate(state, pressurePa, temperatureK, z);
@@ -643,10 +487,7 @@ std::vector<double> GibbsFlashCalculation::rhs(
         eos_.pseudoCriticalMolarVolumeM3PerMol(z);
 
     const double scale =
-        std::max(
-            MinPseudoDriftScale,
-            std::exp(clampExpArgument(-e.gibbsDimensionless))
-        );
+        std::exp(clampExpArgument(-e.gibbsDimensionless));
 
     dy[0] =
         scale
@@ -683,7 +524,7 @@ std::vector<double> GibbsFlashCalculation::rhs(
         const double barrierDerivative =
             BarrierOmega
             * e.nLiquid[i]
-            * smoothDelta(e.nLiquid[i] - z[i], z[i]);
+            * smoothDelta(e.nLiquid[i] - z[i]);
 
         dy[2 + i] =
             scale
@@ -691,12 +532,11 @@ std::vector<double> GibbsFlashCalculation::rhs(
                 vaporTerm
                 - liquidTerm
                 - barrierDerivative
-            );
+                );
     }
 
     return dy;
 }
-
 
 GibbsFlashCalculation::RadauStepResult GibbsFlashCalculation::radauIIA3Step(
     const GibbsState& state,
@@ -704,7 +544,7 @@ GibbsFlashCalculation::RadauStepResult GibbsFlashCalculation::radauIIA3Step(
     double pressurePa,
     double temperatureK,
     const Composition& z
-) const
+    ) const
 {
     using numerics::Vector;
 
@@ -714,23 +554,23 @@ GibbsFlashCalculation::RadauStepResult GibbsFlashCalculation::radauIIA3Step(
     const double sqrt6 = std::sqrt(6.0);
 
     const double A[3][3] =
-    {
         {
-            (88.0 - 7.0 * sqrt6) / 360.0,
-            (296.0 - 169.0 * sqrt6) / 1800.0,
-            (-2.0 + 3.0 * sqrt6) / 225.0
-        },
-        {
-            (296.0 + 169.0 * sqrt6) / 1800.0,
-            (88.0 + 7.0 * sqrt6) / 360.0,
-            (-2.0 - 3.0 * sqrt6) / 225.0
-        },
-        {
-            (16.0 - sqrt6) / 36.0,
-            (16.0 + sqrt6) / 36.0,
-            1.0 / 9.0
-        }
-    };
+            {
+                (88.0 - 7.0 * sqrt6) / 360.0,
+                (296.0 - 169.0 * sqrt6) / 1800.0,
+                (-2.0 + 3.0 * sqrt6) / 225.0
+            },
+            {
+                (296.0 + 169.0 * sqrt6) / 1800.0,
+                (88.0 + 7.0 * sqrt6) / 360.0,
+                (-2.0 - 3.0 * sqrt6) / 225.0
+            },
+            {
+                (16.0 - sqrt6) / 36.0,
+                (16.0 + sqrt6) / 36.0,
+                1.0 / 9.0
+            }
+        };
 
     Vector initialGuess(stages * n, 0.0);
 
@@ -790,69 +630,67 @@ GibbsFlashCalculation::RadauStepResult GibbsFlashCalculation::radauIIA3Step(
             options.upperBounds[index] = std::log(upper);
         }
     }
-
     int rhsEvaluations = 0;
-
     auto residualFunction =
         [&](const Vector& unknown) -> Vector
+    {
+        std::array<GibbsState, 3> stageStates;
+        std::array<Vector, 3> stageRhs;
+
+        for (std::size_t s = 0; s < stages; ++s)
         {
-            std::array<GibbsState, 3> stageStates;
-            std::array<Vector, 3> stageRhs;
+            stageStates[s].y.resize(n);
 
-            for (std::size_t s = 0; s < stages; ++s)
+            for (std::size_t i = 0; i < n; ++i)
             {
-                stageStates[s].y.resize(n);
+                stageStates[s].y[i] = unknown[s * n + i];
+            }
 
-                for (std::size_t i = 0; i < n; ++i)
-                {
-                    stageStates[s].y[i] = unknown[s * n + i];
-                }
-
-                stageRhs[s] =
-                    rhs(
-                        stageStates[s],
-                        pressurePa,
-                        temperatureK,
-                        z
+            stageRhs[s] =
+                rhs(
+                    stageStates[s],
+                    pressurePa,
+                    temperatureK,
+                    z
                     );
 
-                ++rhsEvaluations;
-            }
+            ++rhsEvaluations;
+        }
 
-            Vector residual(stages * n, 0.0);
+        Vector residual(stages * n, 0.0);
 
-            for (std::size_t s = 0; s < stages; ++s)
+        for (std::size_t s = 0; s < stages; ++s)
+        {
+            for (std::size_t i = 0; i < n; ++i)
             {
-                for (std::size_t i = 0; i < n; ++i)
+                double collocationValue = state.y[i];
+
+                for (std::size_t m = 0; m < stages; ++m)
                 {
-                    double collocationValue = state.y[i];
-
-                    for (std::size_t m = 0; m < stages; ++m)
-                    {
-                        collocationValue +=
-                            pseudoTimeStep * A[s][m] * stageRhs[m][i];
-                    }
-
-                    residual[s * n + i] =
-                        stageStates[s].y[i] - collocationValue;
+                    collocationValue +=
+                        pseudoTimeStep * A[s][m] * stageRhs[m][i];
                 }
-            }
 
-            return residual;
-        };
+                residual[s * n + i] =
+                    stageStates[s].y[i] - collocationValue;
+            }
+        }
+
+        return residual;
+    };
 
     const numerics::NewtonResult result =
         numerics::NewtonSolver::solve(
             residualFunction,
             initialGuess,
             options
-        );
+            );
 
     if (!result.converged)
     {
         throw std::runtime_error(
             "Gibbs flash Radau step failed: " + result.message
-        );
+            );
     }
 
     RadauStepResult stepResult;
@@ -872,19 +710,18 @@ GibbsFlashCalculation::RadauStepResult GibbsFlashCalculation::radauIIA3Step(
     return stepResult;
 }
 
-
 FlashResult GibbsFlashCalculation::fullRachfordRicePrecheck(
     double pressurePa,
     double temperatureK,
     const Composition& z,
     double tolerance,
     int maxIterations
-) const
+    ) const
 {
     FlashCalculation flashCalculation(
         materials_,
         eos_
-    );
+        );
 
     FlashResult result =
         flashCalculation.calculate(
@@ -893,9 +730,10 @@ FlashResult GibbsFlashCalculation::fullRachfordRicePrecheck(
             z,
             tolerance,
             std::max(maxIterations, 80)
-        );
+            );
 
-    result.method = FlashMethod::HybridFullRachfordRicePrecheck;
+    result.method =
+        FlashMethod::HybridFullRachfordRicePrecheck;
 
     return result;
 }
@@ -906,14 +744,14 @@ double GibbsFlashCalculation::singlePhaseGibbsDimensionless(
     double temperatureK,
     const Composition& z,
     bool vaporPhase
-) const
+    ) const
 {
     const ZFactors zFactors =
         eos_.computeZFactors(
             pressurePa,
             temperatureK,
             z
-        );
+            );
 
     const double zFactor =
         vaporPhase ? zFactors.vapor : zFactors.liquid;
@@ -924,7 +762,7 @@ double GibbsFlashCalculation::singlePhaseGibbsDimensionless(
             temperatureK,
             z,
             zFactor
-        );
+            );
 
     double g = 0.0;
 
@@ -947,7 +785,7 @@ FlashStatus GibbsFlashCalculation::bestSinglePhase(
     double temperatureK,
     const Composition& z,
     double& bestGibbs
-) const
+    ) const
 {
     const double gLiquid =
         singlePhaseGibbsDimensionless(
@@ -955,7 +793,7 @@ FlashStatus GibbsFlashCalculation::bestSinglePhase(
             temperatureK,
             z,
             false
-        );
+            );
 
     const double gVapor =
         singlePhaseGibbsDimensionless(
@@ -963,7 +801,7 @@ FlashStatus GibbsFlashCalculation::bestSinglePhase(
             temperatureK,
             z,
             true
-        );
+            );
 
     if (gLiquid <= gVapor)
     {
@@ -979,7 +817,7 @@ FlashStatus GibbsFlashCalculation::bestSinglePhase(
 bool GibbsFlashCalculation::isConverged(
     const GibbsEvaluation& evaluation,
     double tolerance
-) const
+    ) const
 {
     return
         evaluation.maxFugacityResidual < tolerance
@@ -987,14 +825,13 @@ bool GibbsFlashCalculation::isConverged(
         evaluation.maxPressureResidual < tolerance;
 }
 
-
 FlashResult GibbsFlashCalculation::calculate(
     double pressurePa,
     double temperatureK,
     const Composition& zOverall,
     double tolerance,
     int maxIterations
-) const
+    ) const
 {
     if (pressurePa <= 0.0)
     {
@@ -1011,37 +848,11 @@ FlashResult GibbsFlashCalculation::calculate(
 
     FlashDiagnostics diagnostics;
 
-    diagnostics.gibbsSingleLiquid =
-        singlePhaseGibbsDimensionless(
-            pressurePa,
-            temperatureK,
-            z,
-            false
-        );
-
-    diagnostics.gibbsSingleVapor =
-        singlePhaseGibbsDimensionless(
-            pressurePa,
-            temperatureK,
-            z,
-            true
-        );
-
-    const FlashStatus bestSingle =
-        diagnostics.gibbsSingleLiquid <= diagnostics.gibbsSingleVapor
-        ? FlashStatus::SingleLiquid
-        : FlashStatus::SingleVapor;
-
-    const double bestSingleGibbs =
-        std::min(
-            diagnostics.gibbsSingleLiquid,
-            diagnostics.gibbsSingleVapor
-        );
-
-    // Полный старый flash используется как precheck:
-    // - если он находит single-phase, возвращаем single-phase без Gibbs-Radau;
-    // - если beta находится у границы (< 0.01 или > 0.99), возвращаем RR-результат;
-    // - только в устойчивой двухфазной области запускаем Gibbs-Radau.
+    // Быстрый путь для реакторного расчета.
+    // Сначала запускаем полный старый FlashCalculation:
+    // Wilson K -> Rachford-Rice -> fugacity update -> convergence.
+    // Если состояние однофазное или находится около границы beta=0/1,
+    // сразу возвращаем этот результат и НЕ считаем Gibbs-энергии.
     FlashResult rrPrecheck =
         fullRachfordRicePrecheck(
             pressurePa,
@@ -1049,46 +860,88 @@ FlashResult GibbsFlashCalculation::calculate(
             z,
             tolerance,
             maxIterations
-        );
+            );
 
-    diagnostics.precheckBetaVapor = rrPrecheck.beta;
-    diagnostics.precheckIterations = rrPrecheck.iterations;
-    diagnostics.precheckStatus = static_cast<int>(rrPrecheck.status);
+    diagnostics.precheckBetaVapor =
+        rrPrecheck.beta;
 
-    if (
+    diagnostics.precheckIterations =
+        rrPrecheck.iterations;
+
+    diagnostics.precheckStatus =
+        static_cast<int>(rrPrecheck.status);
+
+    const bool rrIsSinglePhase =
         rrPrecheck.status == FlashStatus::SingleLiquid
         ||
-        rrPrecheck.status == FlashStatus::SingleVapor
-    )
+        rrPrecheck.status == FlashStatus::SingleVapor;
+
+    if (rrIsSinglePhase)
     {
-        rrPrecheck.method = FlashMethod::HybridFullRachfordRicePrecheck;
-        rrPrecheck.diagnostics = diagnostics;
+        rrPrecheck.method =
+            FlashMethod::HybridFullRachfordRicePrecheck;
+
+        rrPrecheck.diagnostics =
+            diagnostics;
 
         return rrPrecheck;
     }
 
-    if (
+    const bool rrIsBoundaryTwoPhase =
         rrPrecheck.status == FlashStatus::Converged
         &&
         (
             rrPrecheck.beta < BoundaryBetaMin
             ||
             rrPrecheck.beta > BoundaryBetaMax
-        )
-    )
+            );
+
+    if (rrIsBoundaryTwoPhase)
     {
-        rrPrecheck.method = FlashMethod::HybridBoundaryRachfordRice;
-        rrPrecheck.diagnostics = diagnostics;
+        rrPrecheck.method =
+            FlashMethod::HybridBoundaryRachfordRice;
+
+        rrPrecheck.diagnostics =
+            diagnostics;
 
         return rrPrecheck;
     }
+
+    // Сюда попадают только устойчиво двухфазные состояния с beta внутри
+    // [BoundaryBetaMin, BoundaryBetaMax]. Только здесь нужны Gibbs-энергии.
+    diagnostics.gibbsSingleLiquid =
+        singlePhaseGibbsDimensionless(
+            pressurePa,
+            temperatureK,
+            z,
+            false
+            );
+
+    diagnostics.gibbsSingleVapor =
+        singlePhaseGibbsDimensionless(
+            pressurePa,
+            temperatureK,
+            z,
+            true
+            );
+
+    const FlashStatus bestSingle =
+        diagnostics.gibbsSingleLiquid <= diagnostics.gibbsSingleVapor
+            ? FlashStatus::SingleLiquid
+            : FlashStatus::SingleVapor;
+
+    const double bestSingleGibbs =
+        std::min(
+            diagnostics.gibbsSingleLiquid,
+            diagnostics.gibbsSingleVapor
+            );
 
     GibbsState state =
         initialState(
             pressurePa,
             temperatureK,
             z
-        );
+            );
 
     try
     {
@@ -1098,7 +951,7 @@ FlashResult GibbsFlashCalculation::calculate(
                 pressurePa,
                 temperatureK,
                 z
-            );
+                );
 
         diagnostics.initialBetaVapor =
             initialEvaluation.betaVapor;
@@ -1124,6 +977,7 @@ FlashResult GibbsFlashCalculation::calculate(
     }
 
     GibbsEvaluation lastEvaluation;
+
     double pseudoTimeStep = 1.0e-2;
 
     for (int iter = 0; iter < maxIterations; ++iter)
@@ -1136,7 +990,7 @@ FlashResult GibbsFlashCalculation::calculate(
                     pressurePa,
                     temperatureK,
                     z
-                );
+                    );
 
             diagnostics.pseudoSteps = iter + 1;
             diagnostics.gibbsTwoPhase = lastEvaluation.gibbsDimensionless;
@@ -1164,7 +1018,19 @@ FlashResult GibbsFlashCalculation::calculate(
                         makeTwoPhaseResult(
                             lastEvaluation,
                             diagnostics.acceptedRadauSteps
-                        );
+                            );
+
+                    diagnostics.gibbsTwoPhase =
+                        lastEvaluation.gibbsDimensionless;
+
+                    diagnostics.maxFugacityResidual =
+                        lastEvaluation.maxFugacityResidual;
+
+                    diagnostics.maxPressureResidual =
+                        lastEvaluation.maxPressureResidual;
+
+                    diagnostics.finalPseudoTimeStep =
+                        pseudoTimeStep;
 
                     result.diagnostics = diagnostics;
 
@@ -1172,7 +1038,7 @@ FlashResult GibbsFlashCalculation::calculate(
                         result,
                         pressurePa,
                         temperatureK
-                    );
+                        );
 
                     return result;
                 }
@@ -1183,11 +1049,9 @@ FlashResult GibbsFlashCalculation::calculate(
                         pressurePa,
                         temperatureK,
                         z
-                    );
+                        );
 
                 result.diagnostics = diagnostics;
-                result.iterations = diagnostics.acceptedRadauSteps
-                    + diagnostics.rejectedRadauSteps;
 
                 return result;
             }
@@ -1205,7 +1069,7 @@ FlashResult GibbsFlashCalculation::calculate(
                             pressurePa,
                             temperatureK,
                             z
-                        );
+                            );
 
                     GibbsState candidate = radauStep.state;
 
@@ -1215,13 +1079,13 @@ FlashResult GibbsFlashCalculation::calculate(
                             pressurePa,
                             temperatureK,
                             z
-                        );
+                            );
 
                     if (
                         std::isfinite(candidateEvaluation.gibbsDimensionless)
                         &&
                         candidateEvaluation.maxPressureResidual < 1.0e6
-                    )
+                        )
                     {
                         diagnostics.acceptedRadauSteps += 1;
 
@@ -1280,7 +1144,7 @@ FlashResult GibbsFlashCalculation::calculate(
         catch (...)
         {
             diagnostics.lastRadauFailureMessage =
-                "Unknown Gibbs evaluation failure";
+                "Unknown Gibbs flash failure";
             break;
         }
     }
@@ -1291,22 +1155,23 @@ FlashResult GibbsFlashCalculation::calculate(
             pressurePa,
             temperatureK,
             z
-        );
+            );
 
     diagnostics.finalPseudoTimeStep = pseudoTimeStep;
 
     result.diagnostics = diagnostics;
-    result.iterations = diagnostics.acceptedRadauSteps
+
+    result.iterations =
+        diagnostics.acceptedRadauSteps
         + diagnostics.rejectedRadauSteps;
 
     return result;
 }
 
-
 FlashResult GibbsFlashCalculation::makeTwoPhaseResult(
     const GibbsEvaluation& evaluation,
     int iterations
-) const
+    ) const
 {
     FlashResult result;
 
@@ -1347,7 +1212,7 @@ FlashResult GibbsFlashCalculation::makeSinglePhaseResult(
     double pressurePa,
     double temperatureK,
     const Composition& z
-) const
+    ) const
 {
     FlashResult result;
 
@@ -1363,7 +1228,7 @@ FlashResult GibbsFlashCalculation::makeSinglePhaseResult(
             pressurePa,
             temperatureK,
             z
-        );
+            );
 
     if (status == FlashStatus::SingleVapor)
     {
@@ -1377,7 +1242,7 @@ FlashResult GibbsFlashCalculation::makeSinglePhaseResult(
                 temperatureK,
                 z,
                 result.zVapor
-            );
+                );
 
         result.phiLiquid = result.phiVapor;
     }
@@ -1393,7 +1258,7 @@ FlashResult GibbsFlashCalculation::makeSinglePhaseResult(
                 temperatureK,
                 z,
                 result.zLiquid
-            );
+                );
 
         result.phiVapor = result.phiLiquid;
     }
@@ -1411,7 +1276,7 @@ FlashResult GibbsFlashCalculation::makeSinglePhaseResult(
 
 double GibbsFlashCalculation::averageMolarMassKgPerKmol(
     const Composition& composition
-) const
+    ) const
 {
     double value = 0.0;
 
@@ -1430,7 +1295,7 @@ void GibbsFlashCalculation::fillDensities(
     FlashResult& result,
     double pressurePa,
     double temperatureK
-) const
+    ) const
 {
     result.molarMassLiquidKgPerKmol =
         averageMolarMassKgPerKmol(result.xLiquid);
@@ -1463,11 +1328,11 @@ void GibbsFlashCalculation::fillDensities(
         /
         (
             (1.0 - beta)
-            / std::max(result.molarDensityLiquidKmolPerM3, Tiny)
+                / std::max(result.molarDensityLiquidKmolPerM3, 1.0e-30)
             +
             beta
-            / std::max(result.molarDensityVaporKmolPerM3, Tiny)
-        );
+                / std::max(result.molarDensityVaporKmolPerM3, 1.0e-30)
+            );
 
     const double mixtureMolarMass =
         (1.0 - beta) * result.molarMassLiquidKgPerKmol
