@@ -1,9 +1,7 @@
 #pragma once
 
-#include "../Component.h"
 #include "../thermo/ThermoPackage.h"
 
-#include <array>
 #include <string>
 #include <vector>
 
@@ -144,9 +142,10 @@ struct SimulationConfig {
     int schemaVersion = 1;
     std::string caseName = "current_slave_v1_baseline";
 
-    std::vector<Component> components;
-
     DataSourcesConfig dataSources;
+
+    // Ordered component identifiers from input file.
+    // Resolved through ChemSep ComponentDatabase.
     std::vector<std::string> componentKeys;
 
     ThermoConfig thermo;

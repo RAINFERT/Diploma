@@ -7,11 +7,11 @@
 #include <vector>
 
 ComponentEnthalpyData makeEnthalpyDataFromChemsep(
-    Component component,
+    const std::string& componentKey,
     const ChemsepComponent& chemsepComponent
     );
 
 ComponentEnthalpyDataList makeEnthalpyDataListFromChemsep(
-    const std::vector<Component>& components,
+    const std::vector<std::string>& componentKeys,
     const std::vector<const ChemsepComponent*>& chemsepComponents
     );

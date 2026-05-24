@@ -126,23 +126,6 @@ std::string readString(
     return value.toString().toStdString();
 }
 
-Component componentFromString(const QString& name)
-{
-    if (name == "C2H6") {
-        return Component::C2H6;
-    }
-
-    if (name == "C5H12") {
-        return Component::C5H12;
-    }
-
-    if (name == "H2O") {
-        return Component::H2O;
-    }
-
-    throw configError("Unknown component: " + name);
-}
-
 ThermoFlashMode flashModeFromString(const QString& name)
 {
     if (name == "RachfordRice") {
@@ -207,24 +190,27 @@ void requireArraySize(
 
 std::vector<double> readCompositionArray(
     const QJsonArray& array,
-    const std::vector<Component>& components
+    const std::size_t componentCount
     )
 {
     requireArraySize(
         array,
-        components.size(),
+        componentCount,
         "feed.composition"
         );
 
-    std::vector<double> composition;
-    composition.resize(components.size(), 0.0);
+    std::vector<double> composition(
+        componentCount,
+        0.0
+        );
 
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        const double value = readArrayNumber(
-            array,
-            static_cast<int>(i),
-            "feed.composition"
-            );
+    for (std::size_t i = 0; i < componentCount; ++i) {
+        const double value =
+            readArrayNumber(
+                array,
+                static_cast<int>(i),
+                "feed.composition"
+                );
 
         if (value < 0.0) {
             throw configError(
@@ -241,24 +227,27 @@ std::vector<double> readCompositionArray(
 
 std::vector<double> readComponentMassesKgArray(
     const QJsonArray& array,
-    const std::vector<Component>& components
+    const std::size_t componentCount
     )
 {
     requireArraySize(
         array,
-        components.size(),
+        componentCount,
         "initial_state.component_masses_kg"
         );
 
-    std::vector<double> masses;
-    masses.resize(components.size(), 0.0);
+    std::vector<double> masses(
+        componentCount,
+        0.0
+        );
 
-    for (std::size_t i = 0; i < components.size(); ++i) {
-        const double value = readArrayNumber(
-            array,
-            static_cast<int>(i),
-            "initial_state.component_masses_kg"
-            );
+    for (std::size_t i = 0; i < componentCount; ++i) {
+        const double value =
+            readArrayNumber(
+                array,
+                static_cast<int>(i),
+                "initial_state.component_masses_kg"
+                );
 
         if (value < 0.0) {
             throw configError(
@@ -271,32 +260,6 @@ std::vector<double> readComponentMassesKgArray(
     }
 
     return masses;
-}
-
-void validateCurrentComponentSet(
-    const std::vector<Component>& components
-    )
-{
-    if (components.empty()) {
-        throw std::runtime_error(
-            "Config must contain at least one component"
-            );
-    }
-
-    std::array<bool, ComponentCount> present{};
-
-    for (const Component component : components) {
-        const std::size_t index =
-            componentIndex(component);
-
-        if (present[index]) {
-            throw std::runtime_error(
-                "Duplicate component in config components list"
-                );
-        }
-
-        present[index] = true;
-    }
 }
 
 } // namespace
@@ -353,28 +316,37 @@ SimulationConfig SimulationConfigLoader::load(const std::string& path)
             "data/chemsep_components_properties.csv"
             );
 
-    const QJsonArray componentsArray = requireArray(root, "components");
+    const QJsonArray componentsArray =
+        requireArray(root, "components");
 
     config.componentKeys.clear();
-    config.components.clear();
 
     for (const QJsonValue& value : componentsArray) {
         if (!value.isString()) {
-            throw std::runtime_error("Every component name must be a string");
+            throw std::runtime_error(
+                "Every component name must be a string"
+                );
         }
 
-        const QString componentKey = value.toString();
+        const std::string componentKey =
+            value.toString().toStdString();
+
+        if (componentKey.empty()) {
+            throw std::runtime_error(
+                "Component key must not be empty"
+                );
+        }
 
         config.componentKeys.push_back(
-            componentKey.toStdString()
-            );
-
-        config.components.push_back(
-            componentFromString(componentKey)
+            componentKey
             );
     }
 
-    validateCurrentComponentSet(config.components);
+    if (config.componentKeys.empty()) {
+        throw std::runtime_error(
+            "Config must contain at least one component"
+            );
+    }
 
     const QJsonObject thermo = requireObject(root, "thermo");
     config.thermo.eos = readString(thermo, "eos", "PengRobinson");
@@ -405,7 +377,7 @@ SimulationConfig SimulationConfigLoader::load(const std::string& path)
     config.feed.composition =
         readCompositionArray(
             requireArray(feed, "composition"),
-            config.components
+            config.componentKeys.size()
             );
 
     const QJsonObject reactor = requireObject(root, "reactor");
@@ -437,10 +409,11 @@ SimulationConfig SimulationConfigLoader::load(const std::string& path)
         readDouble(initialState, "temperature_C", 100.0);
     config.initialState.pressureBar =
         readDouble(initialState, "pressure_bar", 2.5);
+
     config.initialState.componentMassesKg =
         readComponentMassesKgArray(
             requireArray(initialState, "component_masses_kg"),
-            config.components
+            config.componentKeys.size()
             );
 
     const QJsonObject pressureInitialization =

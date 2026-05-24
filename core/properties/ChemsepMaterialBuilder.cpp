@@ -140,19 +140,13 @@ void validateMaterial(
 } // namespace
 
 Material makeMaterialFromChemsep(
-    const Component component,
+    const std::string& componentKey,
     const ChemsepComponent& chemsepComponent
     )
 {
     Material material;
 
-    material.component =
-        component;
-
-    // Пока расчетная модель еще использует старые имена C2H6/C5H12/H2O.
-    // Поэтому оставляем имя из enum, а не "Ethane"/"N-pentane"/"Water".
-    material.name =
-        componentName(component);
+    material.name = componentKey;
 
     material.criticalTemperatureK =
         requireFiniteScalar(
@@ -201,26 +195,26 @@ Material makeMaterialFromChemsep(
 }
 
 MaterialList makeMaterialListFromChemsep(
-    const std::vector<Component>& components,
+    const std::vector<std::string>& componentKeys,
     const std::vector<const ChemsepComponent*>& chemsepComponents
     )
 {
-    if (components.size() != chemsepComponents.size()) {
+    if (componentKeys.size() != chemsepComponents.size()) {
         throw std::runtime_error(
-            "Cannot build MaterialList: components size differs from ChemSep components size"
+            "Cannot build MaterialList: componentKeys size differs from ChemSep components size"
             );
     }
 
-    if (components.empty()) {
+    if (componentKeys.empty()) {
         throw std::runtime_error(
             "Cannot build MaterialList: empty component list"
             );
     }
 
     MaterialList materials;
-    materials.reserve(components.size());
+    materials.reserve(componentKeys.size());
 
-    for (std::size_t i = 0; i < components.size(); ++i) {
+    for (std::size_t i = 0; i < componentKeys.size(); ++i) {
         if (chemsepComponents[i] == nullptr) {
             throw std::runtime_error(
                 "Cannot build MaterialList: null ChemSep component pointer"
@@ -229,7 +223,7 @@ MaterialList makeMaterialListFromChemsep(
 
         materials.push_back(
             makeMaterialFromChemsep(
-                components[i],
+                componentKeys[i],
                 *chemsepComponents[i]
                 )
             );

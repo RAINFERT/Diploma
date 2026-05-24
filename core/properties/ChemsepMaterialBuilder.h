@@ -8,11 +8,11 @@
 #include <vector>
 
 Material makeMaterialFromChemsep(
-    Component component,
+    const std::string& componentKey,
     const ChemsepComponent& chemsepComponent
     );
 
 MaterialList makeMaterialListFromChemsep(
-    const std::vector<Component>& components,
+    const std::vector<std::string>& componentKeys,
     const std::vector<const ChemsepComponent*>& chemsepComponents
     );

@@ -32,7 +32,6 @@ struct AntoineCoefficients
 
 struct Material
 {
-    Component component;
     std::string name;
 
     // Критическая температура, K

@@ -11,9 +11,9 @@ ComponentSet ComponentSetBuilder::build(
     const ComponentDatabase& database
     )
 {
-    if (config.componentKeys.size() != config.components.size()) {
+    if (config.componentKeys.empty()) {
         throw std::runtime_error(
-            "Cannot build ComponentSet: componentKeys size differs from components size"
+            "Cannot build ComponentSet: empty component key list"
             );
     }
 
@@ -41,19 +41,18 @@ ComponentSet ComponentSetBuilder::build(
 
     const MaterialList materials =
         makeMaterialListFromChemsep(
-            config.components,
+            config.componentKeys,
             resolvedComponents
             );
 
     const ComponentEnthalpyDataList enthalpyData =
         makeEnthalpyDataListFromChemsep(
-            config.components,
+            config.componentKeys,
             resolvedComponents
             );
 
     return ComponentSet(
         config.componentKeys,
-        config.components,
         chemsepComponents,
         materials,
         enthalpyData

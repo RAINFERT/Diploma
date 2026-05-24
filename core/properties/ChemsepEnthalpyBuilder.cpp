@@ -111,7 +111,7 @@ void validateEnthalpyData(
 } // namespace
 
 ComponentEnthalpyData makeEnthalpyDataFromChemsep(
-    const Component component,
+    const std::string& componentKey,
     const ChemsepComponent& chemsepComponent
     )
 {
@@ -130,7 +130,7 @@ ComponentEnthalpyData makeEnthalpyDataFromChemsep(
 
     // Пока расчетная модель использует старые имена C2H6/C5H12/H2O.
     data.name =
-        componentName(component);
+        componentKey;
 
     data.referenceTemperatureK =
         298.15;
@@ -164,26 +164,26 @@ ComponentEnthalpyData makeEnthalpyDataFromChemsep(
 }
 
 ComponentEnthalpyDataList makeEnthalpyDataListFromChemsep(
-    const std::vector<Component>& components,
+    const std::vector<std::string>& componentKeys,
     const std::vector<const ChemsepComponent*>& chemsepComponents
     )
 {
-    if (components.size() != chemsepComponents.size()) {
+    if (componentKeys.size() != chemsepComponents.size()) {
         throw std::runtime_error(
-            "Cannot build ComponentEnthalpyDataList: components size differs from ChemSep components size"
+            "Cannot build ComponentEnthalpyDataList: componentKeys size differs from ChemSep components size"
             );
     }
 
-    if (components.empty()) {
+    if (componentKeys.empty()) {
         throw std::runtime_error(
             "Cannot build ComponentEnthalpyDataList: empty component list"
             );
     }
 
     ComponentEnthalpyDataList enthalpyData;
-    enthalpyData.reserve(components.size());
+    enthalpyData.reserve(componentKeys.size());
 
-    for (std::size_t i = 0; i < components.size(); ++i) {
+    for (std::size_t i = 0; i < componentKeys.size(); ++i) {
         if (chemsepComponents[i] == nullptr) {
             throw std::runtime_error(
                 "Cannot build ComponentEnthalpyDataList: null ChemSep component pointer"
@@ -192,7 +192,7 @@ ComponentEnthalpyDataList makeEnthalpyDataListFromChemsep(
 
         enthalpyData.push_back(
             makeEnthalpyDataFromChemsep(
-                components[i],
+                componentKeys[i],
                 *chemsepComponents[i]
                 )
             );

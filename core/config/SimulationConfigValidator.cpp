@@ -257,25 +257,25 @@ void SimulationConfigValidator::validate(const SimulationConfig& config)
         "dataSources.componentPropertiesCsv"
         );
 
-    if (config.components.empty()) {
+    if (config.componentKeys.empty()) {
         throw std::runtime_error(
             "Config must contain at least one component"
             );
     }
 
-    if (config.componentKeys.size() != config.components.size()) {
+    if (config.componentKeys.size() != config.componentKeys.size()) {
         throw std::runtime_error(
             "Internal config error: componentKeys size differs from components size"
             );
     }
 
-    if (config.feed.composition.size() != config.components.size()) {
+    if (config.feed.composition.size() != config.componentKeys.size()) {
         throw std::runtime_error(
             "Config error: feed.composition size must match components size"
             );
     }
 
-    if (config.initialState.componentMassesKg.size() != config.components.size()) {
+    if (config.initialState.componentMassesKg.size() != config.componentKeys.size()) {
         throw std::runtime_error(
             "Config error: initialState.componentMassesKg size must match components size"
             );

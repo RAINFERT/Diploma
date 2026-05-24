@@ -13,7 +13,6 @@ class ComponentSet {
 public:
     ComponentSet(
         std::vector<std::string> componentKeys,
-        std::vector<Component> legacyComponents,
         std::vector<ChemsepComponent> chemsepComponents,
         MaterialList materials,
         ComponentEnthalpyDataList enthalpyData
@@ -22,10 +21,6 @@ public:
     std::size_t size() const;
 
     const std::string& key(
-        std::size_t index
-        ) const;
-
-    Component legacyComponent(
         std::size_t index
         ) const;
 
@@ -42,7 +37,6 @@ public:
         ) const;
 
     const std::vector<std::string>& keys() const;
-    const std::vector<Component>& legacyComponents() const;
     const std::vector<ChemsepComponent>& chemsepComponents() const;
 
     const MaterialList& materials() const;
@@ -50,7 +44,6 @@ public:
 
 private:
     std::vector<std::string> componentKeys_;
-    std::vector<Component> legacyComponents_;
     std::vector<ChemsepComponent> chemsepComponents_;
 
     MaterialList materials_;

@@ -74,6 +74,11 @@ ReactionRates ReactionModel::computeRates(
         return result;
     }
 
+    throw std::runtime_error(
+        "ReactionModel is not implemented for arbitrary ChemSep component sets. "
+        "Set reactions.enabled=false or implement stoichiometric reactions in config."
+        );
+
     if (temperatureK <= 0.0)
     {
         throw std::invalid_argument("Temperature must be positive");

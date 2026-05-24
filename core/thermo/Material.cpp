@@ -9,7 +9,6 @@ MaterialList createDefaultMaterials()
 
     materials[componentIndex(Component::C2H6)] =
         Material{
-            Component::C2H6,
             "C2H6",
 
             // component_name = Ethane
@@ -32,7 +31,6 @@ MaterialList createDefaultMaterials()
 
     materials[componentIndex(Component::C5H12)] =
         Material{
-            Component::C5H12,
             "C5H12",
 
             // component_name = N-pentane
@@ -55,7 +53,6 @@ MaterialList createDefaultMaterials()
 
     materials[componentIndex(Component::H2O)] =
         Material{
-            Component::H2O,
             "H2O",
 
             // component_name = Water
