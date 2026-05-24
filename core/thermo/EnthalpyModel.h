@@ -14,7 +14,7 @@ struct ComponentEnthalpyData
     double referenceTemperatureK = 298.15;
     double referenceMolarEnthalpyJPerKmol = 0.0;
 
-    // Cp(T) = A + B*T + C*T^2 + D*T^3 + E/T^2
+    // Cp(T) = A + B*T + C*T^2 + D*T^3 + E*T^4
     // J/(kmol*K)
     double cpA = 0.0;
     double cpB = 0.0;

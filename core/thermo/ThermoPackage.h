@@ -46,6 +46,12 @@ public:
         ThermoFlashMode flashMode = ThermoFlashMode::GibbsRadauHybrid
         );
 
+    ThermoPackage(
+        const MaterialList& materials,
+        const ComponentEnthalpyDataList& enthalpyData,
+        ThermoFlashMode flashMode = ThermoFlashMode::GibbsRadauHybrid
+        );
+
     const EnthalpyModel& enthalpy() const;
 
     const MaterialList& materials() const;

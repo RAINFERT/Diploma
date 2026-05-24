@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "case_name": "current_slave_v1_baseline",
+
+  "data_sources": {
+    "component_properties_csv": "data/chemsep_components_properties.csv"
+  },
+
+  "components": [
+    "C2H6",
+    "C5H12",
+    "H2O"
+  ],
+
+  "thermo": {
+    "eos": "PengRobinson",
+    "flash_mode": "RachfordRice",
+    "flash_tolerance": 1.0e-8,
+    "flash_max_iterations": 100
+  },
+
+  "feed": {
+    "pressure_bar": 2.5,
+    "temperature_C": 25.0,
+    "flow_kmol_per_s": 0.001,
+    "composition_basis": "mole_fraction",
+    "composition": [0.5, 0.5, 0.0]
+  },
+
+  "reactor": {
+    "type": "well_stirred",
+    "volume_m3": 1.0,
+
+    "outlet": {
+      "valve_coefficient_kmol_per_s_bar": 0.1,
+      "reference_pressure_bar": 2.5,
+      "allow_reverse_flow": false
+    },
+
+    "heat_transfer": {
+      "area_m2": 1.0,
+      "coefficient_W_per_m2_K": 500.0,
+      "jacket_temperature_C": 110.0
+    }
+  },
+
+  "initial_state": {
+    "temperature_C": 100.0,
+    "pressure_bar": 2.5,
+    "component_masses_kg": [0.0, 1.0, 500.0],
+
+    "pressure_initialization": {
+      "pressure_min_Pa": 10000.0,
+      "pressure_max_Pa": 10000000.0,
+      "volume_tolerance_m3": 1.0e-8,
+      "newton_max_iterations": 20,
+      "fallback_to_bisection": true
+    }
+  },
+
+  "reactions": {
+    "enabled": true,
+    "forward_rate_constant_1_per_s": 100.0,
+    "reverse_rate_constant_1_per_s": 100.0
+  },
+
+  "solver": {
+    "model": "energy_dae",
+    "integrator": "RadauIIA3",
+    "time_step_s": 1.0,
+    "step_count": 30,
+    "print_every": 1
+  },
+
+  "limits": {
+    "min_component_mass_kg": 0.0,
+    "max_component_mass_kg": 1000000.0,
+
+    "min_temperature_C": -100.0,
+    "max_temperature_C": 1000.0,
+
+    "min_pressure_bar": 0.001,
+    "max_pressure_bar": 1000.0,
+
+    "min_flow_kmol_per_s": 0.0,
+    "max_flow_kmol_per_s": 1000.0,
+
+    "min_reactor_volume_m3": 1.0e-9,
+    "max_reactor_volume_m3": 1000000.0,
+
+    "min_time_step_s": 1.0e-12,
+    "max_time_step_s": 1000000.0,
+
+    "min_step_count": 1,
+    "max_step_count": 10000000,
+
+    "composition_sum_tolerance": 1.0e-8,
+
+    "fail_on_negative_inventory": true,
+    "fail_on_invalid_composition": true
+  },
+
+  "output": {
+    "enabled": true,
+    "directory": "results",
+
+    "write_result_table": true,
+    "result_table_file": "result_table.csv",
+
+    "write_initial_state": false,
+    "initial_state_file": "initial_state.txt",
+
+    "write_pressure_initialization": false,
+    "pressure_initialization_file": "pressure_initialization.txt",
+
+    "write_final_state": false,
+    "final_state_file": "final_state.txt"
+  },
+
+  "diagnostics": {
+    "print_initial_state": true,
+    "print_materials": true,
+    "run_flash_diagnostics": false,
+    "run_reactor_model_diagnostic": false,
+    "run_pressure_initialization_diagnostic": true,
+    "run_mass_balance_diagnostic": false,
+    "run_dae_residual_diagnostic": false,
+    "run_energy_balance_diagnostic": false,
+    "run_energy_dae_residual_diagnostic": false,
+    "run_energy_radau_single_step_diagnostic": false,
+    "run_energy_radau_simulation_diagnostic": true,
+    "print_final_state": true
+  }
+}

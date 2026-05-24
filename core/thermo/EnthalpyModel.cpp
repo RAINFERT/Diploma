@@ -356,24 +356,25 @@ double EnthalpyModel::componentMolarEnthalpyJPerKmol(
     const ComponentEnthalpyData& component =
         componentData(componentIndex);
 
-    const double T =
-        temperatureK;
+    const double T = temperatureK;
+    const double Tref = component.referenceTemperatureK;
 
-    const double Tref =
-        component.referenceTemperatureK;
+    const double T2 = T * T;
+    const double T3 = T2 * T;
+    const double T4 = T2 * T2;
+    const double T5 = T4 * T;
+
+    const double Tref2 = Tref * Tref;
+    const double Tref3 = Tref2 * Tref;
+    const double Tref4 = Tref2 * Tref2;
+    const double Tref5 = Tref4 * Tref;
 
     const double deltaH =
         component.cpA * (T - Tref)
-        + 0.5 * component.cpB * (T * T - Tref * Tref)
-        + (1.0 / 3.0) * component.cpC * (T * T * T - Tref * Tref * Tref)
-        + 0.25 * component.cpD * (
-              T * T * T * T
-              - Tref * Tref * Tref * Tref
-              )
-        - component.cpE * (
-              1.0 / T
-              - 1.0 / Tref
-              );
+        + 0.5 * component.cpB * (T2 - Tref2)
+        + (1.0 / 3.0) * component.cpC * (T3 - Tref3)
+        + 0.25 * component.cpD * (T4 - Tref4)
+        + 0.2 * component.cpE * (T5 - Tref5);
 
     return
         component.referenceMolarEnthalpyJPerKmol

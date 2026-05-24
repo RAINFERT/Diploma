@@ -39,6 +39,18 @@ ThermoPackage::ThermoPackage(
 {
 }
 
+ThermoPackage::ThermoPackage(
+    const MaterialList& materials,
+    const ComponentEnthalpyDataList& enthalpyData,
+    ThermoFlashMode flashMode
+    )
+    : materials_(materials),
+    eos_(materials_),
+    enthalpy_(materials_, enthalpyData),
+    flashMode_(flashMode)
+{
+}
+
 void ThermoPackage::setFlashMode(
     ThermoFlashMode flashMode
 )
