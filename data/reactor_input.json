@@ -1,0 +1,53 @@
+{
+  "component_database_csv": "C:/YandexDisk/TANK C++/WellStirredReactor/data/chemsep_components_model_ready.csv",
+  "binary_interaction_csv": "C:/YandexDisk/TANK C++/WellStirredReactor/data/binary_coefficients.csv",
+
+  "components": [
+    "Ethane",
+    "N-pentane",
+    "Water"
+  ],
+
+  "initial": {
+    "pressure_Pa": 2500000.0,
+    "temperature_K": 298.15,
+    "total_moles_kmol": 1.0,
+    "composition": [0.5, 0.5, 0.0]
+  },
+
+  "feed": {
+    "molar_flow_kmol_per_s": 0.01,
+    "pressure_Pa": 2000000.0,
+    "temperature_K": 350.0,
+    "composition": [0.8, 0.2, 0.0]
+  },
+
+  "valve": {
+    "outlet_valve_coefficient_kmol_per_s_Pa": 1.0e-8,
+    "allow_reverse_outlet_flow": false
+  },
+
+  "heat_transfer": {
+    "area_m2": 1.0,
+    "coefficient_W_per_m2_K": 100.0,
+    "jacket_temperature_K": 330.0
+  },
+
+  "flash": {
+    "initial_liquid_split": 0.999999,
+    "pseudo_time_step": 0.02,
+    "tolerance": 1.0e-8,
+    "max_iterations": 20000
+  },
+
+  "radau": {
+    "residual_tolerance": 1.0e-8,
+    "step_tolerance": 1.0e-10,
+    "max_newton_iterations": 30
+  },
+
+  "simulation": {
+    "time_step_s": 0.1,
+    "step_count": 20
+  }
+}

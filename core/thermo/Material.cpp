@@ -1,6 +1,7 @@
 #include "Material.h"
 
 #include <cmath>
+#include <stdexcept>
 
 MaterialList createDefaultMaterials()
 {
@@ -8,65 +9,104 @@ MaterialList createDefaultMaterials()
         Material{
             Component::C2H6,
             "C2H6",
-            32.27800903 + 273.15,     // Tc, K
-            4.883850098e6,            // Pc, Pa
-            9.86e-2,                  // omega
-            30.06990051,              // kg/kmol
+
+            // Данные из chemsep_components_model_ready.csv:
+            // component_name = Ethane
+            305.32,       // Tc, K
+            4872000.0,    // Pc, Pa
+            0.1455,       // Vc, m3/kmol
+            0.279,        // Zc
+            0.099,        // omega
+            30.06904,     // MW, kg/kmol
+
+            // ChemSep vapour_pressure_eqno = 101, unit = Pa
+            // ln(P[Pa]) = A + B/T + C*ln(T) + D*T^E
             AntoineCoefficients{
-                44.0103,
-                -2568.82,
-                0.0,
-                -4.97635,
-                1.46e-5,
-                2.0
+                61.43744,     // A
+                -2814.319,    // B
+                0.0,          // denominator shift, not used for eq101
+                -6.778053,    // C in ChemSep, coefficient before ln(T)
+                2.10827e-05,  // D
+                2.0           // E
             }
         },
+
         Material{
             Component::C5H12,
             "C5H12",
-            196.4500061 + 273.15,     // Tc, K
-            3.375120117e6,            // Pc, Pa
-            0.253890008,              // omega
-            72.15100098,              // kg/kmol
+
+            // Данные из chemsep_components_model_ready.csv:
+            // component_name = N-pentane
+            469.7,        // Tc, K
+            3370000.0,    // Pc, Pa
+            0.311,        // Vc, m3/kmol
+            0.268,        // Zc
+            0.251,        // omega
+            72.14878,     // MW, kg/kmol
+
+            // ChemSep vapour_pressure_eqno = 101, unit = Pa
             AntoineCoefficients{
-                63.3315,
-                -5117.78,
-                0.0,
-                -7.48305,
-                7.77e-6,
-                2.0
+                72.14242,       // A
+                -5265.589,      // B
+                0.0,            // denominator shift
+                -7.720709,      // C in ChemSep
+                7.151866e-06,   // D
+                2.0             // E
             }
         },
+
         Material{
             Component::H2O,
             "H2O",
-            374.1490112 + 273.15,     // Tc, K
-            22.12e6,                  // Pc, Pa
-            0.344000012,              // omega
-            18.01510048,              // kg/kmol
+
+            // Данные из chemsep_components_model_ready.csv:
+            // component_name = Water
+            647.14,       // Tc, K
+            22064000.0,   // Pc, Pa
+            0.05595,      // Vc, m3/kmol
+            0.229,        // Zc
+            0.344,        // omega
+            18.01528,     // MW, kg/kmol
+
+            // ChemSep vapour_pressure_eqno = 101, unit = Pa
             AntoineCoefficients{
-                65.9278,
-                -7227.53,
-                0.0,
-                -7.17695,
-                4.03e-6,
-                2.0
+                74.55502,     // A
+                -7295.586,    // B
+                0.0,          // denominator shift
+                -7.442448,    // C in ChemSep
+                4.2881e-06,   // D
+                2.0           // E
             }
         }
     };
 }
 
-double vaporPressurePa(const Material& material, double temperatureK)
+double vaporPressurePa(
+    const Material& material,
+    double temperatureK
+    )
 {
+    if (temperatureK <= 0.0)
+    {
+        throw std::invalid_argument("Temperature must be positive");
+    }
+
     const AntoineCoefficients& c = material.antoine;
 
-    const double lnPressureKPa =
+    // Для текущих коэффициентов из ChemSep:
+    //
+    // ln(P[Pa]) = A + B / T + C * ln(T) + D * T^E
+    //
+    // В структуре:
+    // c.C = 0.0
+    // c.D = коэффициент перед ln(T)
+    // c.E = коэффициент перед T^F
+    // c.F = степень T
+    const double lnPressurePa =
         c.A
         + c.B / (c.C + temperatureK)
         + c.D * std::log(temperatureK)
         + c.E * std::pow(temperatureK, c.F);
 
-    const double pressureKPa = std::exp(lnPressureKPa);
-
-    return pressureKPa * 1000.0;
+    return std::exp(lnPressurePa);
 }

@@ -31,7 +31,7 @@ namespace
     constexpr bool PrintInitialState = true;
     constexpr bool PrintMaterials = false;
 
-    constexpr bool RunFlashDiagnostics = true;
+    constexpr bool RunFlashDiagnostics = false;
     constexpr bool RunReactorModelDiagnostic = false;
     constexpr bool RunPressureInitializationDiagnostic = true;
     constexpr bool RunMassBalanceDiagnostic = false;
@@ -54,7 +54,7 @@ namespace
     constexpr bool RunEnergyBalanceDiagnostic = false;
     constexpr bool RunEnergyDaeResidualDiagnostic = false;
     constexpr bool RunEnergyRadauSingleStepDiagnostic = false;
-    constexpr bool RunEnergyRadauSimulationDiagnostic = false;
+    constexpr bool RunEnergyRadauSimulationDiagnostic = true;
 
     constexpr bool PrintFinalState = true;
 
@@ -153,10 +153,111 @@ namespace
         std::cout << "\nFlash result:\n";
         std::cout << "  status     = "
                   << flashStatusToString(result.status) << "\n";
-        std::cout << "  iterations = " << result.iterations << "\n";
+        std::cout << "  method     = "
+                  << flashMethodToString(result.method)
+                  << "\n";
+        std::cout << "  iterations = "
+                  << result.iterations
+                  << "\n";
+        std::cout << "  accepted pseudo-time steps = "
+                  << result.diagnostics.acceptedRadauSteps
+                  << "\n";
+
+        std::cout << "  rejected Radau attempts    = "
+                  << result.diagnostics.rejectedRadauSteps
+                  << "\n";
         std::cout << "  beta       = " << result.beta << "\n";
         std::cout << "  Z_liq      = " << result.zLiquid << "\n";
         std::cout << "  Z_vap      = " << result.zVapor << "\n";
+
+
+        const FlashDiagnostics& d = result.diagnostics;
+
+        std::cout << "\nGibbs-Radau diagnostics:\n";
+
+        std::cout << "  pseudo steps                  = "
+                  << d.pseudoSteps << "\n";
+
+        std::cout << "  accepted Radau steps          = "
+                  << d.acceptedRadauSteps << "\n";
+
+        std::cout << "  rejected Radau steps          = "
+                  << d.rejectedRadauSteps << "\n";
+
+        std::cout << "  total Radau Newton iterations = "
+                  << d.totalRadauNewtonIterations << "\n";
+
+        std::cout << "  last Radau Newton iterations  = "
+                  << d.lastRadauNewtonIterations << "\n";
+
+        std::cout << "  last Radau residual norm      = "
+                  << d.lastRadauResidualNorm << "\n";
+
+        std::cout << "  last Radau step norm          = "
+                  << d.lastRadauStepNorm << "\n";
+
+        std::cout << "  RHS evaluations               = "
+                  << d.rhsEvaluations << "\n";
+
+        std::cout << "  G_two_phase / RT              = "
+                  << d.gibbsTwoPhase << "\n";
+
+        std::cout << "  G_single_liquid / RT          = "
+                  << d.gibbsSingleLiquid << "\n";
+
+        std::cout << "  G_single_vapor / RT           = "
+                  << d.gibbsSingleVapor << "\n";
+
+        std::cout << "  max |ln(fL/fV)|               = "
+                  << d.maxFugacityResidual << "\n";
+
+        std::cout << "  max pressure residual         = "
+                  << d.maxPressureResidual << "\n";
+
+        std::cout << "  final pseudo-time step        = "
+                  << d.finalPseudoTimeStep << "\n";
+
+        std::cout << "  candidate beta liquid         = "
+                  << d.betaLiquidCandidate << "\n";
+
+        std::cout << "  candidate beta vapor          = "
+                  << d.betaVaporCandidate << "\n";
+
+        std::cout << "  initial beta vapor           = "
+                  << d.initialBetaVapor << "\n";
+
+        std::cout << "  initial G_two_phase / RT     = "
+                  << d.initialGibbsTwoPhase << "\n";
+
+        std::cout << "  initial max |ln(fL/fV)|      = "
+                  << d.initialMaxFugacityResidual << "\n";
+
+        std::cout << "  initial max pressure residual= "
+                  << d.initialMaxPressureResidual << "\n";
+
+        std::cout << "  last Radau failure           = "
+                  << d.lastRadauFailureMessage << "\n";
+
+        std::cout << "  precheck beta vapor          = "
+                  << d.precheckBetaVapor << "\n";
+
+        std::cout << "  precheck F(0)                = "
+                  << d.precheckF0 << "\n";
+
+        std::cout << "  precheck F(1)                = "
+                  << d.precheckF1 << "\n";
+
+        std::cout << "  precheck iterations          = "
+                  << d.precheckIterations << "\n";
+
+        std::cout << "  full RR precheck beta vapor  = "
+                  << d.precheckBetaVapor << "\n";
+
+        std::cout << "  full RR precheck iterations  = "
+                  << d.precheckIterations << "\n";
+
+        std::cout << "  full RR precheck status      = "
+                  << d.precheckStatus << "\n";
 
         std::cout << "\nDensities:\n";
         std::cout << "  rho_mol_liq = "
@@ -232,45 +333,50 @@ namespace
                       << "    error = "
                       << zCalculated - z[i]
                       << "\n";
-        }
+        }       
     }
 
-    void runFlashDiagnostics(
-        const ReactorState& state,
-        const ThermoPackage& thermo
-    )
+    void runFlashDiagnostics(const ThermoPackage& thermo)
     {
-        const Composition z = state.moleFractions();
-
-        const double pressurePa =
-            state.pressureBar() * 1.0e5;
-
-        const double temperatureK =
-            state.temperatureC() + 273.15;
-
         runFlashCase(
-            "Case 1: C2H6/C5H12, P = 4 bar, T = 25 C",
+            "HYSYS Case 1: z = 0.5 / 0.5 / 0.0, P = 4 bar, T = 25 C",
             thermo,
-            0.4e6,
+            4.0e5,
             25.0 + 273.15,
             Composition{0.5, 0.5, 0.0}
-        );
+            );
 
         runFlashCase(
-            "Case 2: C2H6/C5H12, P = 20 bar, T = 100 C",
+            "HYSYS Case 2: z = 0.7 / 0.3 / 0.0, P = 5 bar, T = 20 C",
             thermo,
-            2.0e6,
+            5.0e5,
+            20.0 + 273.15,
+            Composition{0.7, 0.3, 0.0}
+            );
+
+        runFlashCase(
+            "HYSYS Case 3: z = 0.4 / 0.6 / 0.0, P = 20 bar, T = 100 C",
+            thermo,
+            20.0e5,
             100.0 + 273.15,
             Composition{0.4, 0.6, 0.0}
-        );
+            );
 
         runFlashCase(
-            "Case 3: reactor initial state",
+            "HYSYS Case 4: z = 0.7 / 0.25 / 0.05, P = 5 bar, T = 20 C",
             thermo,
-            pressurePa,
-            temperatureK,
-            z
-        );
+            5.0e5,
+            20.0 + 273.15,
+            Composition{0.7, 0.25, 0.05}
+            );
+
+        runFlashCase(
+            "HYSYS Case 5: z = 0.0 / 0.0 / 0.99, P = 2.5 bar, T = 100 C",
+            thermo,
+            2.5e5,
+            100.0 + 273.15,
+            Composition{0.0, 0.0005, 0.9995}
+            );
     }
 
     // ============================================================
@@ -1144,6 +1250,68 @@ namespace
 
 int main(int argc, char* argv[])
 {
+
+    /*
+    const MaterialList materials = createDefaultMaterials();
+
+    const double T = 293.15;
+
+    for (const Material& material : materials)
+    {
+        std::cout
+            << material.name
+            << " Psat at 293.15 K = "
+            << vaporPressurePa(material, T) / 1.0e6
+            << " MPa\n";
+    }
+
+    ThermoPackage thermo;
+
+    const double temperatureK = 293.15;
+    const double pressurePa = 0.5e6;
+
+    Composition z{};
+    z[componentIndex(Component::C2H6)] = 0.70;
+    z[componentIndex(Component::C5H12)] = 0.25;
+    z[componentIndex(Component::H2O)] = 0.05;
+
+    FlashResult flash =
+        thermo.flash(
+            pressurePa,
+            temperatureK,
+            z,
+            1.0e-8,
+            500
+            );
+
+    std::cout << "status = "
+              << flashStatusToString(flash.status)
+              << "\n";
+
+    std::cout << "beta vapor = "
+              << flash.beta
+              << "\n";
+
+    std::cout << "x liquid: ";
+    for (double value : flash.xLiquid)
+    {
+        std::cout << value << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "y vapor: ";
+    for (double value : flash.yVapor)
+    {
+        std::cout << value << " ";
+    }
+    std::cout << "\n";
+
+    std::cout << "Z liquid = " << flash.zLiquid << "\n";
+    std::cout << "Z vapor  = " << flash.zVapor << "\n";
+
+    */
+
+
     ReactorState initialState;
     ThermoPackage thermo;
 
@@ -1180,7 +1348,7 @@ int main(int argc, char* argv[])
 
     if (RunFlashDiagnostics)
     {
-        runFlashDiagnostics(initialState, thermo);
+        runFlashDiagnostics(thermo);
     }
 
     if (RunReactorModelDiagnostic)

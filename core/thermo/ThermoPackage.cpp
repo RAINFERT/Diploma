@@ -1,4 +1,6 @@
 #include "ThermoPackage.h"
+#include "GibbsFlashCalculation.h"
+#include <iostream>
 
 ThermoPackage::ThermoPackage()
     : materials_(createDefaultMaterials()),
@@ -46,7 +48,7 @@ FlashResult ThermoPackage::flash(
     int maxIterations
     ) const
 {
-    FlashCalculation flashCalculation(
+    GibbsFlashCalculation  flashCalculation(
         materials_,
         eos_
         );
@@ -57,7 +59,7 @@ FlashResult ThermoPackage::flash(
             temperatureK,
             zOverall,
             tolerance,
-            maxIterations
+            std::max(maxIterations, 80)
             );
 
     result.molarEnthalpyLiquidJPerKmol =
@@ -81,6 +83,35 @@ FlashResult ThermoPackage::flash(
             * result.molarEnthalpyLiquidJPerKmol
         + result.beta
               * result.molarEnthalpyVaporJPerKmol;
+
+    static int flashCallCounter = 0;
+    ++flashCallCounter;
+
+    /*
+    if (flashCallCounter <= 20 || flashCallCounter % 100 == 0)
+    {
+        std::cout
+            << "[flash #" << flashCallCounter << "] "
+            << "method = " << flashMethodToString(result.method)
+            << ", status = " << flashStatusToString(result.status)
+            << ", beta = " << result.beta
+            << ", accepted = " << result.diagnostics.acceptedRadauSteps
+            << ", rejected = " << result.diagnostics.rejectedRadauSteps
+            << "\n";
+    }
+
+    */
+
+    if (result.status == FlashStatus::NotConverged)
+    {
+        std::cerr
+            << "[WARNING] Flash did not converge. "
+            << "P = " << pressurePa
+            << ", T = " << temperatureK
+            << ", beta = " << result.beta
+            << ", method = " << flashMethodToString(result.method)
+            << "\n";
+    }
 
     return result;
 }

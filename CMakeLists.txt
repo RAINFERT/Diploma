@@ -40,6 +40,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
         core/simulation/EnergyReactorSimulation.h core/simulation/EnergyReactorSimulation.cpp
         README
         .gitignore
+        core/thermo/GibbsFlashCalculation.h core/thermo/GibbsFlashCalculation.cpp
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET WellStirredReactor APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

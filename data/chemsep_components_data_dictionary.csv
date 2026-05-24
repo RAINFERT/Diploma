@@ -1,0 +1,211 @@
+﻿column_name;category;unit;description
+chemsep_index;identifier;;Index из ChemSep/PCDman
+component_name;identifier;;Название компонента
+formula_chemsep;identifier;;Формула/краткая запись из ChemSep
+cas_number;identifier;;CAS Registry Number
+structure_smiles;identifier;;SMILES/структурная запись из файла ChemSep, если была
+inchikey;identifier;;InChIKey, если был в экспортированном блоке
+family_id;identifier;;ID семейства ChemSep
+family_name;identifier;;Название семейства ChemSep
+chemsep_record_id;identifier;;Внутренний числовой код/record id из хвоста блока ChemSep
+MW_kg_per_kmol;scalar_property;;Молекулярная масса
+Tc_K;scalar_property;K;Критическая температура
+Pc_Pa;scalar_property;Pa;Критическое давление
+Vc_m3_per_kmol;scalar_property;m3/kmol;Критический объем
+Zc;scalar_property;;Критический коэффициент сжимаемости
+omega;scalar_property;;Ацентрический фактор
+Tb_K;scalar_property;K;Нормальная температура кипения
+Tm_K;scalar_property;K;Температура плавления
+Ttriple_K;scalar_property;K;Температура тройной точки
+Ptriple_Pa;scalar_property;Pa;Давление тройной точки
+Vm_liq_Tb_m3_per_kmol;scalar_property;m3/kmol;Молярный объем жидкости при нормальной температуре кипения
+radius_gyration_m;scalar_property;m;
+solubility_parameter_J05_m15;scalar_property;J^0.5/m^1.5;
+dipole_moment_C_m;scalar_property;m;
+vdw_volume_m3_per_kmol;scalar_property;m3/kmol;
+vdw_area_m2_per_kmol;scalar_property;;
+h_form_ig_J_per_kmol;scalar_property;J/kmol;
+gibbs_form_ig_J_per_kmol;scalar_property;J/kmol;
+s_abs_ig_J_per_kmol_K;scalar_property;K;
+heat_fusion_Tm_J_per_kmol;scalar_property;J/kmol;
+lhv_combustion_J_per_kmol;scalar_property;J/kmol;
+costld_Vstar_m3_per_kmol;scalar_property;m3/kmol;
+lennard_jones_diameter_m;scalar_property;m;
+lennard_jones_energy_K;scalar_property;K;
+rackett_parameter;scalar_property;;
+fuller_diffusion_volume;scalar_property;;
+parachor_kg025_m3_s05_per_kmol;scalar_property;;
+specific_gravity;scalar_property;;
+charge;scalar_property;;
+omega_srk;scalar_property;;
+wilson_volume_m3_per_kmol;scalar_property;m3/kmol;
+uniquac_r;scalar_property;;
+uniquac_q;scalar_property;;
+uniquac_q_prime;scalar_property;;
+api_srk_s1;scalar_property;;
+api_srk_s2;scalar_property;;
+mathias_copeman_C1;scalar_property;;
+mathias_copeman_C2;scalar_property;;
+mathias_copeman_C3;scalar_property;;
+omega_chao_seader;scalar_property;;
+chao_seader_solubility_parameter_J05_m15;scalar_property;J^0.5/m^1.5;
+chao_seader_liquid_volume_m3_per_kmol;scalar_property;m3/kmol;
+antoine_eqno;temperature_correlation;ChemSep equation number;
+antoine_unit;temperature_correlation;text;
+antoine_A;temperature_correlation;coefficient;
+antoine_B;temperature_correlation;coefficient;
+antoine_C;temperature_correlation;coefficient;
+antoine_D;temperature_correlation;coefficient;
+antoine_E;temperature_correlation;coefficient;
+antoine_Tmin_K;temperature_correlation;K;
+antoine_Tmax_K;temperature_correlation;K;
+vapour_pressure_eqno;temperature_correlation;ChemSep equation number;
+vapour_pressure_unit;temperature_correlation;text;
+vapour_pressure_A;temperature_correlation;coefficient;
+vapour_pressure_B;temperature_correlation;coefficient;
+vapour_pressure_C;temperature_correlation;coefficient;
+vapour_pressure_D;temperature_correlation;coefficient;
+vapour_pressure_E;temperature_correlation;coefficient;
+vapour_pressure_Tmin_K;temperature_correlation;K;
+vapour_pressure_Tmax_K;temperature_correlation;K;
+heat_vaporization_eqno;temperature_correlation;ChemSep equation number;
+heat_vaporization_unit;temperature_correlation;text;
+heat_vaporization_A;temperature_correlation;coefficient;
+heat_vaporization_B;temperature_correlation;coefficient;
+heat_vaporization_C;temperature_correlation;coefficient;
+heat_vaporization_D;temperature_correlation;coefficient;
+heat_vaporization_E;temperature_correlation;coefficient;
+heat_vaporization_Tmin_K;temperature_correlation;K;
+heat_vaporization_Tmax_K;temperature_correlation;K;
+ideal_gas_cp_eqno;temperature_correlation;ChemSep equation number;
+ideal_gas_cp_unit;temperature_correlation;text;
+ideal_gas_cp_A;temperature_correlation;coefficient;
+ideal_gas_cp_B;temperature_correlation;coefficient;
+ideal_gas_cp_C;temperature_correlation;coefficient;
+ideal_gas_cp_D;temperature_correlation;coefficient;
+ideal_gas_cp_E;temperature_correlation;coefficient;
+ideal_gas_cp_Tmin_K;temperature_correlation;K;
+ideal_gas_cp_Tmax_K;temperature_correlation;K;
+ideal_gas_cp_rpp_eqno;temperature_correlation;ChemSep equation number;
+ideal_gas_cp_rpp_unit;temperature_correlation;text;
+ideal_gas_cp_rpp_A;temperature_correlation;coefficient;
+ideal_gas_cp_rpp_B;temperature_correlation;coefficient;
+ideal_gas_cp_rpp_C;temperature_correlation;coefficient;
+ideal_gas_cp_rpp_D;temperature_correlation;coefficient;
+ideal_gas_cp_rpp_E;temperature_correlation;coefficient;
+ideal_gas_cp_rpp_Tmin_K;temperature_correlation;K;
+ideal_gas_cp_rpp_Tmax_K;temperature_correlation;K;
+liquid_cp_eqno;temperature_correlation;ChemSep equation number;
+liquid_cp_unit;temperature_correlation;text;
+liquid_cp_A;temperature_correlation;coefficient;
+liquid_cp_B;temperature_correlation;coefficient;
+liquid_cp_C;temperature_correlation;coefficient;
+liquid_cp_D;temperature_correlation;coefficient;
+liquid_cp_E;temperature_correlation;coefficient;
+liquid_cp_Tmin_K;temperature_correlation;K;
+liquid_cp_Tmax_K;temperature_correlation;K;
+solid_cp_eqno;temperature_correlation;ChemSep equation number;
+solid_cp_unit;temperature_correlation;text;
+solid_cp_A;temperature_correlation;coefficient;
+solid_cp_B;temperature_correlation;coefficient;
+solid_cp_C;temperature_correlation;coefficient;
+solid_cp_D;temperature_correlation;coefficient;
+solid_cp_E;temperature_correlation;coefficient;
+solid_cp_Tmin_K;temperature_correlation;K;
+solid_cp_Tmax_K;temperature_correlation;K;
+liquid_density_eqno;temperature_correlation;ChemSep equation number;
+liquid_density_unit;temperature_correlation;text;
+liquid_density_A;temperature_correlation;coefficient;
+liquid_density_B;temperature_correlation;coefficient;
+liquid_density_C;temperature_correlation;coefficient;
+liquid_density_D;temperature_correlation;coefficient;
+liquid_density_E;temperature_correlation;coefficient;
+liquid_density_Tmin_K;temperature_correlation;K;
+liquid_density_Tmax_K;temperature_correlation;K;
+solid_density_eqno;temperature_correlation;ChemSep equation number;
+solid_density_unit;temperature_correlation;text;
+solid_density_A;temperature_correlation;coefficient;
+solid_density_B;temperature_correlation;coefficient;
+solid_density_C;temperature_correlation;coefficient;
+solid_density_D;temperature_correlation;coefficient;
+solid_density_E;temperature_correlation;coefficient;
+solid_density_Tmin_K;temperature_correlation;K;
+solid_density_Tmax_K;temperature_correlation;K;
+liquid_viscosity_eqno;temperature_correlation;ChemSep equation number;
+liquid_viscosity_unit;temperature_correlation;text;
+liquid_viscosity_A;temperature_correlation;coefficient;
+liquid_viscosity_B;temperature_correlation;coefficient;
+liquid_viscosity_C;temperature_correlation;coefficient;
+liquid_viscosity_D;temperature_correlation;coefficient;
+liquid_viscosity_E;temperature_correlation;coefficient;
+liquid_viscosity_Tmin_K;temperature_correlation;K;
+liquid_viscosity_Tmax_K;temperature_correlation;K;
+liquid_viscosity_rps_eqno;temperature_correlation;ChemSep equation number;
+liquid_viscosity_rps_unit;temperature_correlation;text;
+liquid_viscosity_rps_A;temperature_correlation;coefficient;
+liquid_viscosity_rps_B;temperature_correlation;coefficient;
+liquid_viscosity_rps_C;temperature_correlation;coefficient;
+liquid_viscosity_rps_D;temperature_correlation;coefficient;
+liquid_viscosity_rps_E;temperature_correlation;coefficient;
+liquid_viscosity_rps_Tmin_K;temperature_correlation;K;
+liquid_viscosity_rps_Tmax_K;temperature_correlation;K;
+vapour_viscosity_eqno;temperature_correlation;ChemSep equation number;
+vapour_viscosity_unit;temperature_correlation;text;
+vapour_viscosity_A;temperature_correlation;coefficient;
+vapour_viscosity_B;temperature_correlation;coefficient;
+vapour_viscosity_C;temperature_correlation;coefficient;
+vapour_viscosity_D;temperature_correlation;coefficient;
+vapour_viscosity_E;temperature_correlation;coefficient;
+vapour_viscosity_Tmin_K;temperature_correlation;K;
+vapour_viscosity_Tmax_K;temperature_correlation;K;
+liquid_thermal_conductivity_eqno;temperature_correlation;ChemSep equation number;
+liquid_thermal_conductivity_unit;temperature_correlation;text;
+liquid_thermal_conductivity_A;temperature_correlation;coefficient;
+liquid_thermal_conductivity_B;temperature_correlation;coefficient;
+liquid_thermal_conductivity_C;temperature_correlation;coefficient;
+liquid_thermal_conductivity_D;temperature_correlation;coefficient;
+liquid_thermal_conductivity_E;temperature_correlation;coefficient;
+liquid_thermal_conductivity_Tmin_K;temperature_correlation;K;
+liquid_thermal_conductivity_Tmax_K;temperature_correlation;K;
+vapour_thermal_conductivity_eqno;temperature_correlation;ChemSep equation number;
+vapour_thermal_conductivity_unit;temperature_correlation;text;
+vapour_thermal_conductivity_A;temperature_correlation;coefficient;
+vapour_thermal_conductivity_B;temperature_correlation;coefficient;
+vapour_thermal_conductivity_C;temperature_correlation;coefficient;
+vapour_thermal_conductivity_D;temperature_correlation;coefficient;
+vapour_thermal_conductivity_E;temperature_correlation;coefficient;
+vapour_thermal_conductivity_Tmin_K;temperature_correlation;K;
+vapour_thermal_conductivity_Tmax_K;temperature_correlation;K;
+surface_tension_eqno;temperature_correlation;ChemSep equation number;
+surface_tension_unit;temperature_correlation;text;
+surface_tension_A;temperature_correlation;coefficient;
+surface_tension_B;temperature_correlation;coefficient;
+surface_tension_C;temperature_correlation;coefficient;
+surface_tension_D;temperature_correlation;coefficient;
+surface_tension_E;temperature_correlation;coefficient;
+surface_tension_Tmin_K;temperature_correlation;K;
+surface_tension_Tmax_K;temperature_correlation;K;
+second_virial_eqno;temperature_correlation;ChemSep equation number;
+second_virial_unit;temperature_correlation;text;
+second_virial_A;temperature_correlation;coefficient;
+second_virial_B;temperature_correlation;coefficient;
+second_virial_C;temperature_correlation;coefficient;
+second_virial_D;temperature_correlation;coefficient;
+second_virial_E;temperature_correlation;coefficient;
+second_virial_Tmin_K;temperature_correlation;K;
+second_virial_Tmax_K;temperature_correlation;K;
+relative_static_permittivity_eqno;temperature_correlation;ChemSep equation number;
+relative_static_permittivity_unit;temperature_correlation;text;
+relative_static_permittivity_A;temperature_correlation;coefficient;
+relative_static_permittivity_B;temperature_correlation;coefficient;
+relative_static_permittivity_C;temperature_correlation;coefficient;
+relative_static_permittivity_D;temperature_correlation;coefficient;
+relative_static_permittivity_E;temperature_correlation;coefficient;
+relative_static_permittivity_Tmin_K;temperature_correlation;K;
+relative_static_permittivity_Tmax_K;temperature_correlation;K;
+groups_unifac;group_contribution;;
+groups_unifac_lle;group_contribution;;
+groups_asog;group_contribution;;
+groups_ppr78;group_contribution;;
+groups_umr;group_contribution;;
+groups_modified_unifac;group_contribution;;

@@ -39,11 +39,13 @@ inline double molecularWeightKgPerKmol(Component component)
     switch (component)
     {
     case Component::C2H6:
-        return 30.069;     // kg/kmol
+        return 30.06904;
+
     case Component::C5H12:
-        return 72.151;     // kg/kmol
+        return 72.14878;
+
     case Component::H2O:
-        return 18.01528;   // kg/kmol
+        return 18.01528;
     }
 
     return 0.0;

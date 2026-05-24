@@ -45,6 +45,29 @@ public:
         double zFactor
         ) const;
 
+    double pressureFromMolarVolume(
+        double temperatureK,
+        double molarVolumeM3PerMol,
+        const Composition& composition
+        ) const;
+
+    Composition computeLogFugacityCoefficients(
+        double pressurePa,
+        double temperatureK,
+        const Composition& composition,
+        double zFactor
+        ) const;
+
+    double pseudoCriticalMolarVolume(
+        const Composition& composition
+        ) const;
+
+    double pseudoCriticalMolarVolumeM3PerMol(
+        const Composition& composition
+        ) const;
+
+
+
 private:
     static constexpr double R = 8.314462618;
 

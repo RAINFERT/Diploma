@@ -669,6 +669,7 @@ FlashResult FlashCalculation::calculate(
     const Composition z = normalizedComposition(zOverall);
 
     FlashResult result;
+    result.method = FlashMethod::RachfordRice;
 
     Composition k = initialKValues(
         pressurePa,
