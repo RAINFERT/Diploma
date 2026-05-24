@@ -273,11 +273,13 @@ std::vector<double> readComponentMassesKgArray(
     return masses;
 }
 
-void validateCurrentComponentSet(const std::vector<Component>& components)
+void validateCurrentComponentSet(
+    const std::vector<Component>& components
+    )
 {
-    if (components.size() != ComponentCount) {
+    if (components.empty()) {
         throw std::runtime_error(
-            "At current stage config must contain exactly 3 components: C2H6, C5H12, H2O"
+            "Config must contain at least one component"
             );
     }
 
@@ -294,14 +296,6 @@ void validateCurrentComponentSet(const std::vector<Component>& components)
         }
 
         present[index] = true;
-    }
-
-    for (std::size_t i = 0; i < ComponentCount; ++i) {
-        if (!present[i]) {
-            throw std::runtime_error(
-                "At current stage config must contain C2H6, C5H12, and H2O exactly once"
-                );
-        }
     }
 }
 

@@ -211,14 +211,14 @@ MaterialList makeMaterialListFromChemsep(
             );
     }
 
-    if (components.size() != ComponentCount) {
+    if (components.empty()) {
         throw std::runtime_error(
-            "Cannot build MaterialList at current stage: expected exactly ComponentCount components"
+            "Cannot build MaterialList: empty component list"
             );
     }
 
-    MaterialList materials(ComponentCount);
-    std::array<bool, ComponentCount> assigned{};
+    MaterialList materials;
+    materials.reserve(components.size());
 
     for (std::size_t i = 0; i < components.size(); ++i) {
         if (chemsepComponents[i] == nullptr) {
@@ -227,27 +227,12 @@ MaterialList makeMaterialListFromChemsep(
                 );
         }
 
-        const Component component =
-            components[i];
-
-        const std::size_t index =
-            componentIndex(component);
-
-        materials[index] =
+        materials.push_back(
             makeMaterialFromChemsep(
-                component,
+                components[i],
                 *chemsepComponents[i]
-                );
-
-        assigned[index] = true;
-    }
-
-    for (std::size_t i = 0; i < ComponentCount; ++i) {
-        if (!assigned[i]) {
-            throw std::runtime_error(
-                "Cannot build MaterialList: not all fixed components were assigned"
-                );
-        }
+                )
+            );
     }
 
     return materials;

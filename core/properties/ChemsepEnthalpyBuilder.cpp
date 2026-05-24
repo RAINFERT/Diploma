@@ -174,14 +174,14 @@ ComponentEnthalpyDataList makeEnthalpyDataListFromChemsep(
             );
     }
 
-    if (components.size() != ComponentCount) {
+    if (components.empty()) {
         throw std::runtime_error(
-            "Cannot build ComponentEnthalpyDataList at current stage: expected exactly ComponentCount components"
+            "Cannot build ComponentEnthalpyDataList: empty component list"
             );
     }
 
-    ComponentEnthalpyDataList enthalpyData(ComponentCount);
-    std::array<bool, ComponentCount> assigned{};
+    ComponentEnthalpyDataList enthalpyData;
+    enthalpyData.reserve(components.size());
 
     for (std::size_t i = 0; i < components.size(); ++i) {
         if (chemsepComponents[i] == nullptr) {
@@ -190,27 +190,12 @@ ComponentEnthalpyDataList makeEnthalpyDataListFromChemsep(
                 );
         }
 
-        const Component component =
-            components[i];
-
-        const std::size_t index =
-            componentIndex(component);
-
-        enthalpyData[index] =
+        enthalpyData.push_back(
             makeEnthalpyDataFromChemsep(
-                component,
+                components[i],
                 *chemsepComponents[i]
-                );
-
-        assigned[index] = true;
-    }
-
-    for (std::size_t i = 0; i < ComponentCount; ++i) {
-        if (!assigned[i]) {
-            throw std::runtime_error(
-                "Cannot build ComponentEnthalpyDataList: not all fixed components were assigned"
-                );
-        }
+                )
+            );
     }
 
     return enthalpyData;

@@ -257,9 +257,9 @@ void SimulationConfigValidator::validate(const SimulationConfig& config)
         "dataSources.componentPropertiesCsv"
         );
 
-    if (config.components.size() != ComponentCount) {
+    if (config.components.empty()) {
         throw std::runtime_error(
-            "At stage 1 config must contain exactly 3 components"
+            "Config must contain at least one component"
             );
     }
 

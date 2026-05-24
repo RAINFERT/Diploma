@@ -48,26 +48,14 @@ const Material& ComponentSet::material(
     const std::size_t index
     ) const
 {
-    const Component component =
-        legacyComponents_.at(index);
-
-    const std::size_t legacyIndex =
-        componentIndex(component);
-
-    return materials_.at(legacyIndex);
+    return materials_.at(index);
 }
 
 const ComponentEnthalpyData& ComponentSet::enthalpy(
     const std::size_t index
     ) const
 {
-    const Component component =
-        legacyComponents_.at(index);
-
-    const std::size_t legacyIndex =
-        componentIndex(component);
-
-    return enthalpyData_.at(legacyIndex);
+    return enthalpyData_.at(index);
 }
 
 const std::vector<std::string>& ComponentSet::keys() const
@@ -115,21 +103,17 @@ void ComponentSet::validate() const
             );
     }
 
-    if (materials_.size() != ComponentCount) {
+    if (materials_.size() != componentKeys_.size()) {
         throw std::runtime_error(
-            "ComponentSet validation failed: materials size must be ComponentCount at current stage"
+            "ComponentSet validation failed: materials size differs from componentKeys size"
             );
     }
 
-    if (enthalpyData_.size() != ComponentCount) {
+    if (enthalpyData_.size() != componentKeys_.size()) {
         throw std::runtime_error(
-            "ComponentSet validation failed: enthalpyData size must be ComponentCount at current stage"
+            "ComponentSet validation failed: enthalpyData size differs from componentKeys size"
             );
     }
 
-    if (componentKeys_.size() != ComponentCount) {
-        throw std::runtime_error(
-            "ComponentSet validation failed at current stage: expected exactly ComponentCount components"
-            );
-    }
+
 }
