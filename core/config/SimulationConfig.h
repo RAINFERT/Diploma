@@ -24,7 +24,9 @@ struct FeedConfig {
     double temperatureC = 25.0;
     double flowKmolPerS = 0.001;
     std::string compositionBasis = "mole_fraction";
-    Composition composition{0.5, 0.5, 0.0};
+
+    // Ordered by SimulationConfig::componentKeys / components.
+    std::vector<double> composition{0.5, 0.5, 0.0};
 };
 
 struct ReactorOutletConfig {
@@ -57,7 +59,10 @@ struct PressureInitializationConfig {
 struct InitialStateConfig {
     double temperatureC = 100.0;
     double pressureBar = 2.5;
-    std::array<double, ComponentCount> componentMassesKg{0.0, 1.0, 500.0};
+
+    // Ordered by SimulationConfig::componentKeys / components.
+    std::vector<double> componentMassesKg{0.0, 1.0, 500.0};
+
     PressureInitializationConfig pressureInitialization;
 };
 

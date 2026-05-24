@@ -20,20 +20,34 @@ double sumComposition(const Composition& composition)
     return sum;
 }
 
-Composition normalizedComposition(const Composition& composition)
+Composition normalizedComposition(
+    const Composition& composition
+    )
 {
-    const double sum = sumComposition(composition);
+    Composition result =
+        makeComposition(composition.size());
 
-    if (sum <= 0.0)
-    {
-        throw std::runtime_error("Composition sum must be positive");
+    double sum = 0.0;
+
+    for (double value : composition) {
+        if (value < 0.0) {
+            throw std::runtime_error(
+                "Composition contains negative value"
+                );
+        }
+
+        sum += value;
     }
 
-    Composition result{};
+    if (sum <= 0.0) {
+        throw std::runtime_error(
+            "Composition sum must be positive"
+            );
+    }
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
-    {
-        result[i] = composition[i] / sum;
+    for (std::size_t i = 0; i < composition.size(); ++i) {
+        result[i] =
+            composition[i] / sum;
     }
 
     return result;
@@ -81,9 +95,9 @@ Composition FlashCalculation::wilsonKValues(
         throw std::invalid_argument("Temperature must be positive");
     }
 
-    Composition k{};
+    Composition k = makeComposition(materials_.size());
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         const Material& material = materials_[i];
 
@@ -143,9 +157,9 @@ Composition FlashCalculation::initialKValues(
                 zFactors.vapor
                 );
 
-        Composition kPr{};
+        Composition kPr = makeComposition(materials_.size());
 
-        for (std::size_t i = 0; i < ComponentCount; ++i)
+        for (std::size_t i = 0; i < materials_.size(); ++i)
         {
             if (phiVapor[i] <= Tiny)
             {
@@ -176,7 +190,7 @@ double FlashCalculation::rachfordRice(
 {
     double value = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         const double denominator =
             1.0 + beta * (k[i] - 1.0);
@@ -351,7 +365,7 @@ double FlashCalculation::rachfordRiceDerivative(
 {
     double derivative = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         const double kMinusOne =
             k[i] - 1.0;
@@ -396,7 +410,7 @@ void FlashCalculation::computePhaseCompositions(
         return;
     }
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         const double denominator =
             1.0 + beta * (k[i] - 1.0);
@@ -421,7 +435,7 @@ double FlashCalculation::maxRelativeDifference(
 {
     double maxError = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         const double denominator =
             std::max(std::abs(b[i]), Tiny);
@@ -441,7 +455,7 @@ double FlashCalculation::averageMolarMassKgPerKmol(
 {
     double molarMass = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i)
+    for (std::size_t i = 0; i < materials_.size(); ++i)
     {
         molarMass +=
             composition[i]
@@ -646,6 +660,12 @@ FlashResult FlashCalculation::calculate(
     int maxIterations
     ) const
 {
+    requireCompositionSize(
+        zOverall,
+        materials_.size(),
+        "FlashCalculation::calculate zOverall"
+        );
+
     if (pressurePa <= 0.0)
     {
         throw std::invalid_argument("Pressure must be positive");
@@ -749,9 +769,9 @@ FlashResult FlashCalculation::calculate(
                 zVapor
                 );
 
-        Composition kNew{};
+        Composition kNew = makeComposition(materials_.size());
 
-        for (std::size_t i = 0; i < ComponentCount; ++i)
+        for (std::size_t i = 0; i < materials_.size(); ++i)
         {
             kNew[i] = phiLiquid[i] / phiVapor[i];
 
@@ -783,7 +803,7 @@ FlashResult FlashCalculation::calculate(
 
         // Демпфирование, как в Python-коде:
         // K = 0.1*K_old + 0.9*K_new
-        for (std::size_t i = 0; i < ComponentCount; ++i)
+        for (std::size_t i = 0; i < materials_.size(); ++i)
         {
             k[i] = 0.1 * k[i] + 0.9 * kNew[i];
 

@@ -3,9 +3,10 @@
 #include "../Component.h"
 #include "Material.h"
 
-#include <array>
+#include <vector>
 #include <cstddef>
 #include <string>
+#include <array>
 
 struct ComponentEnthalpyData
 {
@@ -23,8 +24,7 @@ struct ComponentEnthalpyData
     double cpE = 0.0;
 };
 
-using ComponentEnthalpyDataList =
-    std::array<ComponentEnthalpyData, ComponentCount>;
+using ComponentEnthalpyDataList = std::vector<ComponentEnthalpyData>;
 
 ComponentEnthalpyDataList createDefaultEnthalpyData();
 

@@ -5,11 +5,14 @@
 #include <stdexcept>
 
 ReactorState::ReactorState()
-    : massesKg_{0.0, 1.0, 500.0},
+    : massesKg_(makeComposition(ComponentCount)),
     energyJ_(0.0),
     temperatureC_(100.0),
     pressureBar_(2.5)
 {
+    setMassKg(Component::C2H6, 0.0);
+    setMassKg(Component::C5H12, 1.0);
+    setMassKg(Component::H2O, 500.0);
 }
 
 double ReactorState::massKg(Component component) const
@@ -74,13 +77,27 @@ double ReactorState::moleFraction(Component component) const
     return molesKmol(component) / total;
 }
 
-std::array<double, ComponentCount> ReactorState::moleFractions() const
+Composition ReactorState::moleFractions() const
 {
-    return {
-        moleFraction(Component::C2H6),
-        moleFraction(Component::C5H12),
-        moleFraction(Component::H2O)
-    };
+    Composition fractions =
+        makeComposition(ComponentCount);
+
+    const double total =
+        totalMolesKmol();
+
+    if (total <= 0.0) {
+        return fractions;
+    }
+
+    for (std::size_t i = 0; i < ComponentCount; ++i) {
+        const Component component =
+            static_cast<Component>(i);
+
+        fractions[i] =
+            molesKmol(component) / total;
+    }
+
+    return fractions;
 }
 
 double ReactorState::energyJ() const

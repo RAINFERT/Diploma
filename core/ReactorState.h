@@ -21,7 +21,7 @@ public:
     double totalMolesKmol() const;
 
     double moleFraction(Component component) const;
-    std::array<double, ComponentCount> moleFractions() const;
+    Composition moleFractions() const;
 
     double energyJ() const;
     void setEnergyJ(double value);
@@ -35,7 +35,7 @@ public:
     std::string toString() const;
 
 private:
-    std::array<double, ComponentCount> massesKg_;
+    Composition massesKg_;
 
     double energyJ_;
     double temperatureC_;

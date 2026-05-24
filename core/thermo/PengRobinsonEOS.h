@@ -5,8 +5,6 @@
 #include <array>
 #include <cstddef>
 
-using Composition = std::array<double, ComponentCount>;
-
 struct MixtureParameters
 {
     double a;
@@ -73,10 +71,9 @@ private:
 
     MaterialList materials_;
 
-    std::array<double, ComponentCount> bi_;
-    std::array<double, ComponentCount> mi_;
-
-    std::array<std::array<double, ComponentCount>, ComponentCount> kij_;
+    std::vector<double> bi_;
+    std::vector<double> mi_;
+    std::vector<std::vector<double>> kij_;
 
     void computePureParameters();
 
@@ -85,7 +82,5 @@ private:
         double temperatureK
         ) const;
 
-    std::array<double, ComponentCount> computeAi(
-        double temperatureK
-        ) const;
+    std::vector<double> computeAi(double temperatureK) const;
 };

@@ -111,19 +111,17 @@ struct FlashResult
     double beta = 0.0;
 
     // Составы фаз
-    Composition xLiquid{};
-    Composition yVapor{};
+    Composition xLiquid = makeComposition();
+    Composition yVapor = makeComposition();
 
-    // K_i = y_i / x_i
-    Composition kValues{};
+    Composition kValues = makeComposition();
+
+    Composition phiLiquid = makeComposition();
+    Composition phiVapor = makeComposition();
 
     // Z-факторы фаз
     double zLiquid = 0.0;
     double zVapor = 0.0;
-
-    // Коэффициенты летучести
-    Composition phiLiquid{};
-    Composition phiVapor{};
 
     // Средние молярные массы фаз, kg/kmol
     double molarMassLiquidKgPerKmol = 0.0;

@@ -2,7 +2,7 @@
 
 #include "../Component.h"
 
-#include <array>
+#include <vector>
 #include <string>
 
 struct AntoineCoefficients
@@ -57,7 +57,7 @@ struct Material
     AntoineCoefficients antoine;
 };
 
-using MaterialList = std::array<Material, ComponentCount>;
+using MaterialList = std::vector<Material>;
 
 MaterialList createDefaultMaterials();
 

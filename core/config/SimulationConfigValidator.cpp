@@ -191,24 +191,34 @@ void validateOutputBlock(const OutputConfig& output)
 }
 
 void validateComposition(
-    const Composition& composition,
+    const std::vector<double>& composition,
     const LimitsConfig& limits,
     const char* name
     )
 {
+    if (composition.empty()) {
+        throw std::runtime_error(
+            "Composition must not be empty"
+            );
+    }
+
     double sum = 0.0;
 
-    for (std::size_t i = 0; i < ComponentCount; ++i) {
+    for (std::size_t i = 0; i < composition.size(); ++i) {
         const double value = composition[i];
 
         requireFinite(value, name);
 
         if (value < 0.0) {
-            throw std::runtime_error("Composition contains negative component fraction");
+            throw std::runtime_error(
+                "Composition contains negative component fraction"
+                );
         }
 
         if (value > 1.0) {
-            throw std::runtime_error("Composition contains component fraction greater than 1");
+            throw std::runtime_error(
+                "Composition contains component fraction greater than 1"
+                );
         }
 
         sum += value;
@@ -256,6 +266,18 @@ void SimulationConfigValidator::validate(const SimulationConfig& config)
     if (config.componentKeys.size() != config.components.size()) {
         throw std::runtime_error(
             "Internal config error: componentKeys size differs from components size"
+            );
+    }
+
+    if (config.feed.composition.size() != config.components.size()) {
+        throw std::runtime_error(
+            "Config error: feed.composition size must match components size"
+            );
+    }
+
+    if (config.initialState.componentMassesKg.size() != config.components.size()) {
+        throw std::runtime_error(
+            "Config error: initialState.componentMassesKg size must match components size"
             );
     }
 
@@ -342,7 +364,7 @@ void SimulationConfigValidator::validate(const SimulationConfig& config)
         "initialState.pressureBar"
         );
 
-    for (std::size_t i = 0; i < ComponentCount; ++i) {
+    for (std::size_t i = 0; i < config.initialState.componentMassesKg.size(); ++i) {
         requireRange(
             config.initialState.componentMassesKg[i],
             limits.minComponentMassKg,

@@ -12,6 +12,7 @@
 
 #include <cmath>
 #include <stdexcept>
+#include <array>
 
 namespace {
 
@@ -204,7 +205,7 @@ void requireArraySize(
     }
 }
 
-Composition readCompositionArray(
+std::vector<double> readCompositionArray(
     const QJsonArray& array,
     const std::vector<Component>& components
     )
@@ -215,11 +216,10 @@ Composition readCompositionArray(
         "feed.composition"
         );
 
-    Composition composition{};
+    std::vector<double> composition;
+    composition.resize(components.size(), 0.0);
 
     for (std::size_t i = 0; i < components.size(); ++i) {
-        const Component component = components[i];
-
         const double value = readArrayNumber(
             array,
             static_cast<int>(i),
@@ -233,13 +233,13 @@ Composition readCompositionArray(
                 );
         }
 
-        composition[static_cast<std::size_t>(component)] = value;
+        composition[i] = value;
     }
 
     return composition;
 }
 
-std::array<double, ComponentCount> readComponentMassesKgArray(
+std::vector<double> readComponentMassesKgArray(
     const QJsonArray& array,
     const std::vector<Component>& components
     )
@@ -250,11 +250,10 @@ std::array<double, ComponentCount> readComponentMassesKgArray(
         "initial_state.component_masses_kg"
         );
 
-    std::array<double, ComponentCount> masses{};
+    std::vector<double> masses;
+    masses.resize(components.size(), 0.0);
 
     for (std::size_t i = 0; i < components.size(); ++i) {
-        const Component component = components[i];
-
         const double value = readArrayNumber(
             array,
             static_cast<int>(i),
@@ -268,7 +267,7 @@ std::array<double, ComponentCount> readComponentMassesKgArray(
                 );
         }
 
-        masses[static_cast<std::size_t>(component)] = value;
+        masses[i] = value;
     }
 
     return masses;
@@ -278,16 +277,29 @@ void validateCurrentComponentSet(const std::vector<Component>& components)
 {
     if (components.size() != ComponentCount) {
         throw std::runtime_error(
-            "At stage 1 config must contain exactly 3 components: C2H6, C5H12, H2O"
+            "At current stage config must contain exactly 3 components: C2H6, C5H12, H2O"
             );
     }
 
-    for (std::size_t i = 0; i < ComponentCount; ++i) {
-        const Component expected = static_cast<Component>(i);
+    std::array<bool, ComponentCount> present{};
 
-        if (components[i] != expected) {
+    for (const Component component : components) {
+        const std::size_t index =
+            componentIndex(component);
+
+        if (present[index]) {
             throw std::runtime_error(
-                "At stage 1 component order must be exactly: C2H6, C5H12, H2O"
+                "Duplicate component in config components list"
+                );
+        }
+
+        present[index] = true;
+    }
+
+    for (std::size_t i = 0; i < ComponentCount; ++i) {
+        if (!present[i]) {
+            throw std::runtime_error(
+                "At current stage config must contain C2H6, C5H12, and H2O exactly once"
                 );
         }
     }

@@ -180,7 +180,7 @@ ComponentEnthalpyDataList makeEnthalpyDataListFromChemsep(
             );
     }
 
-    ComponentEnthalpyDataList enthalpyData{};
+    ComponentEnthalpyDataList enthalpyData(ComponentCount);
     std::array<bool, ComponentCount> assigned{};
 
     for (std::size_t i = 0; i < components.size(); ++i) {

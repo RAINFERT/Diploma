@@ -22,6 +22,38 @@
 
 namespace
 {
+    Composition makeLegacyCompositionFromConfig(
+        const SimulationConfig& config
+        )
+    {
+        if (config.components.size() != config.feed.composition.size()) {
+            throw std::runtime_error(
+                "Cannot build legacy Composition: components size differs from feed composition size"
+                );
+        }
+
+        if (config.components.size() != ComponentCount) {
+            throw std::runtime_error(
+                "Cannot build legacy Composition at current stage: expected exactly ComponentCount components"
+                );
+        }
+
+        Composition composition = makeComposition();
+
+        for (std::size_t i = 0; i < config.components.size(); ++i) {
+            const Component component =
+                config.components[i];
+
+            const std::size_t legacyIndex =
+                componentIndex(component);
+
+            composition[legacyIndex] =
+                config.feed.composition[i];
+        }
+
+        return composition;
+    }
+
     WellStirredReactorParameters makeReactorParameters(
         const SimulationConfig& config
     )
@@ -41,7 +73,7 @@ namespace
             config.feed.temperatureC;
 
         parameters.inletComposition =
-            config.feed.composition;
+            makeLegacyCompositionFromConfig(config);
 
         parameters.outletValveCoefficientKmolPerSBar =
             config.reactor.outlet.valveCoefficientKmolPerSBar;
@@ -66,28 +98,40 @@ namespace
 
     ReactorState makeInitialState(
         const SimulationConfig& config
-    )
+        )
     {
         ReactorState state;
 
-        for (std::size_t i = 0; i < ComponentCount; ++i)
+        if (config.components.size() != config.initialState.componentMassesKg.size()) {
+            throw std::runtime_error(
+                "Cannot build initial state: components size differs from component masses size"
+                );
+        }
+
+        if (config.components.size() != ComponentCount) {
+            throw std::runtime_error(
+                "Cannot build initial state at current stage: expected exactly ComponentCount components"
+                );
+        }
+
+        for (std::size_t i = 0; i < config.components.size(); ++i)
         {
             const Component component =
-                static_cast<Component>(i);
+                config.components[i];
 
             state.setMassKg(
                 component,
                 config.initialState.componentMassesKg[i]
-            );
+                );
         }
 
         state.setTemperatureC(
             config.initialState.temperatureC
-        );
+            );
 
         state.setPressureBar(
             config.initialState.pressureBar
-        );
+            );
 
         state.setEnergyJ(0.0);
 
@@ -280,7 +324,6 @@ namespace
 
         std::cout << std::endl;
     }
-
 }
 
 

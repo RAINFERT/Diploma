@@ -3,6 +3,7 @@
 #include <cmath>
 #include <stdexcept>
 #include <algorithm>
+#include <array>
 
 double EnthalpyModel::idealGasMixtureMolarEnthalpyJPerKmol(
     double temperatureK,
@@ -145,7 +146,7 @@ double EnthalpyModel::pengRobinsonDepartureEnthalpyJPerKmol(
         throw std::invalid_argument("Composition sum must be positive in PR enthalpy departure");
     }
 
-    Composition normalizedComposition{};
+    Composition normalizedComposition= makeComposition(materials_.size());
 
     for (std::size_t i = 0; i < ComponentCount; ++i)
     {
@@ -259,7 +260,7 @@ double EnthalpyModel::phaseMolarEnthalpyJPerKmol(
 
 ComponentEnthalpyDataList createDefaultEnthalpyData()
 {
-    ComponentEnthalpyDataList data{};
+    ComponentEnthalpyDataList data(ComponentCount);
 
     // ВАЖНО:
     // Это временные приближенные Cp для проверки энергетического баланса.
@@ -317,6 +318,11 @@ EnthalpyModel::EnthalpyModel(
     : materials_(materials),
     enthalpyData_(enthalpyData)
 {
+    if (materials_.size() != enthalpyData_.size()) {
+        throw std::runtime_error(
+            "EnthalpyModel error: materials size differs from enthalpy data size"
+            );
+    }
 }
 
 const ComponentEnthalpyDataList& EnthalpyModel::data() const
@@ -387,7 +393,7 @@ Composition EnthalpyModel::componentMolarEnthalpiesJPerKmol(
 {
     validateTemperature(temperatureK);
 
-    Composition result{};
+    Composition result = makeComposition(materials_.size());
 
     for (std::size_t i = 0; i < ComponentCount; ++i)
     {

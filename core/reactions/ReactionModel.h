@@ -10,7 +10,7 @@
 struct ReactionRates
 {
     // Скорости образования компонентов, kmol/(m3_liquid*s)
-    std::array<double, ComponentCount> componentRatesKmolPerM3S{};
+    Composition componentRatesKmolPerM3S = makeComposition();
 
     // Для диагностики
     double forwardRateKmolPerM3S = 0.0;

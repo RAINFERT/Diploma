@@ -50,6 +50,12 @@ ReactionRates ReactionModel::computeRates(
     double liquidMolarDensityKmolPerM3
     ) const
 {
+    requireCompositionSize(
+        liquidComposition,
+        ComponentCount,
+        "ReactionModel::computeRates liquidComposition"
+        );
+
     if (temperatureK <= 0.0)
     {
         throw std::invalid_argument("Temperature must be positive");
@@ -66,6 +72,7 @@ ReactionRates ReactionModel::computeRates(
     }
 
     ReactionRates result;
+    result.componentRatesKmolPerM3S = makeComposition(ComponentCount);
 
     const std::size_t c2Index =
         componentIndex(Component::C2H6);

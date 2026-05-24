@@ -217,7 +217,7 @@ MaterialList makeMaterialListFromChemsep(
             );
     }
 
-    MaterialList materials{};
+    MaterialList materials(ComponentCount);
     std::array<bool, ComponentCount> assigned{};
 
     for (std::size_t i = 0; i < components.size(); ++i) {
